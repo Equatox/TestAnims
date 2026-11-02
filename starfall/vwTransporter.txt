@@ -51,6 +51,8 @@ local PARTS = {
     door_body = "livery.png",
     door_solids = "solids.png",
     door_interior = false,
+    decal = "decal.png",
+    door_decal = "decal.png",
     wheel_fl = "wheel.jpg",
     wheel_fr = "wheel.jpg",
     wheel_rl = "wheel.jpg",
@@ -345,6 +347,8 @@ local function makeMaterial(name, file)
     if name == "glass" then
         mat:setInt("$flags", 2097152 + 8192) -- translucent, drawn from both sides
         mat:setFloat("$alpha", GLASS_ALPHA)
+    elseif file == "decal.png" then
+        mat:setInt("$flags", 2097152) -- translucent, using the image's own transparency
     end
     materials[file] = mat
     return mat
@@ -359,7 +363,7 @@ local function build(meshes)
             holo:setMeshMaterial(makeMaterial(name, file))
             holo:setRenderBounds(Vector(-RENDER_BOUNDS), Vector(RENDER_BOUNDS))
             if file == false then holo:setColor(INTERIOR_COLOR) end
-            if name == "glass" then holo:setRenderGroup(RENDERGROUP.TRANSLUCENT) end
+            if name == "glass" or file == "decal.png" then holo:setRenderGroup(RENDERGROUP.TRANSLUCENT) end
             holos[#holos + 1] = holo
             if name:sub(1, 5) == "door_" then doorHolos[#doorHolos + 1] = holo end
             if PIVOTS[name] then parts[name] = holo end
