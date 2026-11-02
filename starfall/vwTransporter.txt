@@ -5,7 +5,7 @@
 ----------    C O N F I G    ----------
 
 -- folder holding vw_transporter.obj and the textures. Must end in /
-local BASE_URL = "https://YOUR_HOST/vw_transporter/"
+local BASE_URL = "https://raw.githubusercontent.com/Equatox/TestAnims/main/vehicles/vw_transporter/"
 
 local MODEL_SCALE = 16.9              -- 16.9 is about real size
 local OFFSET = Vector(0, 0, 0)        -- from the Base prop or chip. The model's floor is at 0
