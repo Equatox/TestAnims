@@ -12,7 +12,7 @@ local OFFSET = Vector(0, 0, 0)        -- from the Base prop or chip. The model's
 local ANGLES = Angle(0, 0, 0)         -- the model faces +X at 0
 local RENDER_BOUNDS = 300
 
-local GLASS_ALPHA = 0.45              -- windscreen and front door windows
+local GLASS_ALPHA = 0.45              -- windscreen and front door windows, seen from both sides
 local INTERIOR_MATERIAL = "models/debug/debugwhite"
 local INTERIOR_COLOR = Color(130, 130, 130)
 local TEXTURE_SIZE = 1024             -- every image is stretched to fill this
@@ -28,12 +28,20 @@ local DOOR_SOUND = "doors/doormove2.wav"
 local DOOR_BOX_MIN = Vector(-50, 39, 19) -- closed door, in model units x scale 16.9
 local DOOR_BOX_MAX = Vector(13, 51, 104)
 
+-- invisible collision, in the same units as DOOR_BOX. The cab is solid; only the rear is hollow
+local COLLISION = true
+local FLOOR_Z = 17.5                  -- players can step up to 18 without jumping
+local WALL = 5                        -- wall, roof and door thickness
+local BAY_REAR, BAY_FRONT = -128, 12  -- length of the hollow rear
+local BAY_WIDTH = 52                  -- centre to the outside of the van
+local ROOF_Z = 110
+local CAB_PROFILE = {{12, 2}, {122, 2}, {122, 60}, {48, 106}, {12, 110}} -- side outline: x, z
+
 -- mesh name in the OBJ = texture file. false uses INTERIOR_MATERIAL and INTERIOR_COLOR
 local PARTS = {
     body = "livery.png",
     solids = "solids.png",
     interior = false,
-    tire = "vw_transporter_pneu.jpg",
     under = "vw_transporter_dessous.jpg",
     feuxar = "vw_transporter_feuxar.jpg",
     clignot = "vw_transporter_clignot.jpg",
@@ -43,7 +51,22 @@ local PARTS = {
     door_body = "livery.png",
     door_solids = "solids.png",
     door_interior = false,
+    wheel_fl = "wheel.jpg",
+    wheel_fr = "wheel.jpg",
+    wheel_rl = "wheel.jpg",
+    wheel_rr = "wheel.jpg",
+    steering = "solids.png",
 }
+
+-- where each moving part pivots, in the same units as DOOR_BOX. fl = front left
+local PIVOTS = {
+    wheel_fl = Vector(85.0, 45.4, 20.5),
+    wheel_fr = Vector(85.0, -45.6, 20.5),
+    wheel_rl = Vector(-76.1, 45.4, 20.5),
+    wheel_rr = Vector(-76.0, -45.6, 20.5),
+    steering = Vector(53.2, 25.9, 69.0),
+}
+local STEERING_TILT = Angle(-24.2, 180, 0) -- points the steering wheel's local +X down its column
 
 ----------    S E R V E R    ----------
 
@@ -55,6 +78,97 @@ if SERVER then
 
     local function vehicle()
         return isValid(base) and base or chip()
+    end
+
+    local function box(x1, y1, z1, x2, y2, z2)
+        return {
+            Vector(x1, y1, z1), Vector(x2, y1, z1), Vector(x2, y2, z1), Vector(x1, y2, z1),
+            Vector(x1, y1, z2), Vector(x2, y1, z2), Vector(x2, y2, z2), Vector(x1, y2, z2),
+        }
+    end
+
+    local function bodyHulls()
+        local w = BAY_WIDTH
+        local top = ROOF_Z - WALL
+        local cab = {}
+        for _, point in ipairs(CAB_PROFILE) do
+            cab[#cab + 1] = Vector(point[1], -w, point[2])
+            cab[#cab + 1] = Vector(point[1], w, point[2])
+        end
+        return {
+            box(BAY_REAR, -w, 2, BAY_FRONT, w, FLOOR_Z),               -- floor and underside
+            box(BAY_REAR, -w, top, BAY_FRONT, w, ROOF_Z),              -- roof
+            box(BAY_REAR, -w, FLOOR_Z, BAY_REAR + WALL, w, top),       -- rear
+            box(BAY_REAR, -w, FLOOR_Z, BAY_FRONT, -w + WALL, top),     -- right side
+            box(BAY_REAR, w - WALL, FLOOR_Z, DOOR_BOX_MIN[1], w, top), -- left, behind the door
+            cab,
+        }
+    end
+
+    local function doorHull()
+        return {box(DOOR_BOX_MIN[1], BAY_WIDTH - WALL, FLOOR_Z, DOOR_BOX_MAX[1], BAY_WIDTH, ROOF_Z - WALL)}
+    end
+
+    local collider = {}
+
+    local function clearCollision()
+        for _, ent in pairs(collider) do
+            if isValid(ent) then ent:remove() end
+        end
+        collider = {}
+    end
+
+    local function spawnCollider(hulls)
+        local van = vehicle()
+        local pos, ang = localToWorld(OFFSET, ANGLES, van:getPos(), van:getAngles())
+        local ent = prop.createCustom(pos, ang, hulls, true)
+        ent:setNoDraw(true)
+        if isValid(base) then
+            constraint.weld(ent, base, 0, 0, 0, true)
+            ent:setFrozen(false)
+        end
+        return ent
+    end
+
+    -- the door's collision stays put and just stops blocking players while open
+    local function playerInDoorway()
+        local van = vehicle()
+        local pos, ang = localToWorld(OFFSET, ANGLES, van:getPos(), van:getAngles())
+        local a = localToWorld(DOOR_BOX_MIN, Angle(), pos, ang)
+        local b = localToWorld(DOOR_BOX_MAX, Angle(), pos, ang)
+        local boxMin = Vector(math.min(a[1], b[1]), math.min(a[2], b[2]), math.min(a[3], b[3]))
+        local boxMax = Vector(math.max(a[1], b[1]), math.max(a[2], b[2]), math.max(a[3], b[3]))
+        return #find.inBox(boxMin, boxMax, function(ent) return ent:isPlayer() end) > 0
+    end
+
+    local function updateDoorCollision()
+        local ent = collider.door
+        if not isValid(ent) then return end
+        timer.remove("vwDoorClear")
+        if doorOpen then
+            ent:setCollisionGroup(COLLISION_GROUP.DEBRIS)
+        elseif playerInDoorway() then
+            -- closing on someone would trap them, so wait until the doorway is clear
+            ent:setCollisionGroup(COLLISION_GROUP.DEBRIS)
+            timer.create("vwDoorClear", 0.25, 1, updateDoorCollision)
+        else
+            ent:setCollisionGroup(COLLISION_GROUP.NONE)
+        end
+    end
+
+    local function buildCollision()
+        if not COLLISION then return end
+        clearCollision()
+        hook.add("think", "vwBuildCollision", function()
+            if not prop.canSpawn() then return end
+            if not collider.body then
+                collider.body = spawnCollider(bodyHulls())
+            else
+                collider.door = spawnCollider(doorHull())
+                hook.remove("think", "vwBuildCollision")
+                updateDoorCollision()
+            end
+        end)
     end
 
     local function sendBase(target)
@@ -73,6 +187,7 @@ if SERVER then
         if name == "Base" then
             base = value
             sendBase()
+            buildCollision()
         end
     end)
 
@@ -88,8 +203,11 @@ if SERVER then
         nextUse = timer.curtime() + DOOR_TIME
         doorOpen = not doorOpen
         sendDoor()
+        updateDoorCollision()
         pcall(function() vehicle():emitSound(DOOR_SOUND) end)
     end)
+
+    buildCollision()
 
     return
 end
@@ -119,6 +237,35 @@ local function placeDoor()
     end
 end
 
+local parts = {}  -- pivoting parts by name
+
+local function toVan(localAng)
+    local _, ang = localToWorld(Vector(), localAng, Vector(), ANGLES)
+    return ang
+end
+
+-- spin: rolling in degrees. steer: turned left in degrees, for the front wheels
+local function setWheel(name, spin, steer)
+    local holo = parts[name]
+    if holo then holo:setLocalAngles(toVan(Angle(spin, steer or 0, 0))) end
+end
+
+-- degrees around the steering column
+local function setSteeringWheel(degrees)
+    local holo = parts.steering
+    if holo then holo:setLocalAngles(toVan(Angle(STEERING_TILT[1], STEERING_TILT[2], STEERING_TILT[3] + degrees))) end
+end
+
+local function placeParts()
+    for name, holo in pairs(parts) do
+        holo:setLocalPos(OFFSET + PIVOTS[name]:getRotated(ANGLES))
+    end
+    for _, name in ipairs({"wheel_fl", "wheel_fr", "wheel_rl", "wheel_rr"}) do
+        setWheel(name, 0, 0)
+    end
+    setSteeringWheel(0)
+end
+
 local function attach()
     if not isValid(parent) then return end
     local pos, ang = localToWorld(OFFSET, ANGLES, parent:getPos(), parent:getAngles())
@@ -129,6 +276,7 @@ local function attach()
         holo:setParent(parent)
     end
     placeDoor()
+    placeParts()
 end
 
 net.receive("vwBase", function()
@@ -195,7 +343,7 @@ local function makeMaterial(name, file)
     local mat = material.create("VertexLitGeneric")
     mat:setTextureURL("$basetexture", BASE_URL .. file, fillTexture)
     if name == "glass" then
-        mat:setInt("$flags", 2097152) -- translucent
+        mat:setInt("$flags", 2097152 + 8192) -- translucent, drawn from both sides
         mat:setFloat("$alpha", GLASS_ALPHA)
     end
     materials[file] = mat
@@ -214,6 +362,7 @@ local function build(meshes)
             if name == "glass" then holo:setRenderGroup(RENDERGROUP.TRANSLUCENT) end
             holos[#holos + 1] = holo
             if name:sub(1, 5) == "door_" then doorHolos[#doorHolos + 1] = holo end
+            if PIVOTS[name] then parts[name] = holo end
         else
             printConsole("VW Transporter: OBJ has no part called " .. name)
         end
