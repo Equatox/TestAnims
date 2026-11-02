@@ -5,7 +5,7 @@
 ----------    C O N F I G    ----------
 
 -- folder holding vw_transporter.obj and the textures. Must end in /
-local BASE_URL = "https://raw.githubusercontent.com/Equatox/TestAnims/main/vehicles/vw_transporter/"
+local BASE_URL = "https://YOUR_HOST/vw_transporter/"
 
 local MODEL_SCALE = 16.9              -- 16.9 is about real size
 local OFFSET = Vector(0, 0, 0)        -- from the Base prop or chip. The model's floor is at 0
@@ -13,13 +13,26 @@ local ANGLES = Angle(0, 0, 0)         -- the model faces +X at 0
 local RENDER_BOUNDS = 300
 
 local GLASS_ALPHA = 0.45              -- windscreen and front door windows
-local REAR_WINDOW_MATERIAL = "models/debug/debugwhite"
+local INTERIOR_MATERIAL = "models/debug/debugwhite"
+local INTERIOR_COLOR = Color(130, 130, 130)
+local TEXTURE_SIZE = 1024             -- every image is stretched to fill this
 local LOAD_CPU = 0.4                  -- share of the CPU quota used while loading
 
--- mesh name in the OBJ = texture file. false uses REAR_WINDOW_MATERIAL
+-- left side sliding door: press E on it
+local DOOR_OWNER_ONLY = false         -- true: only you can open it
+local DOOR_USE_DISTANCE = 110
+local DOOR_OUT = 7                    -- how far it first moves away from the van
+local DOOR_SLIDE = 58                 -- how far it then slides back
+local DOOR_TIME = 1.2                 -- seconds to fully open or close
+local DOOR_SOUND = "doors/doormove2.wav"
+local DOOR_BOX_MIN = Vector(-50, 39, 19) -- closed door, in model units x scale 16.9
+local DOOR_BOX_MAX = Vector(13, 51, 104)
+
+-- mesh name in the OBJ = texture file. false uses INTERIOR_MATERIAL and INTERIOR_COLOR
 local PARTS = {
     body = "livery.png",
     solids = "solids.png",
+    interior = false,
     tire = "vw_transporter_pneu.jpg",
     under = "vw_transporter_dessous.jpg",
     feuxar = "vw_transporter_feuxar.jpg",
@@ -27,7 +40,9 @@ local PARTS = {
     feuxred = "feuxred.jpg",
     plate = "VW_plate.jpg",
     glass = "glass.png",
-    rearwindow = false,
+    door_body = "livery.png",
+    door_solids = "solids.png",
+    door_interior = false,
 }
 
 ----------    S E R V E R    ----------
@@ -35,22 +50,45 @@ local PARTS = {
 if SERVER then
     wire.adjustPorts({Base = "entity"})
     local base = nil
+    local doorOpen = false
+    local nextUse = 0
 
-    local function send(target)
+    local function vehicle()
+        return isValid(base) and base or chip()
+    end
+
+    local function sendBase(target)
         net.start("vwBase")
-        net.writeEntity(isValid(base) and base or chip())
+        net.writeEntity(vehicle())
+        net.send(target)
+    end
+
+    local function sendDoor(target)
+        net.start("vwDoor")
+        net.writeBool(doorOpen)
         net.send(target)
     end
 
     hook.add("Input", "vwBaseInput", function(name, value)
         if name == "Base" then
             base = value
-            send()
+            sendBase()
         end
     end)
 
     hook.add("ClientInitialized", "vwSync", function(ply)
-        send(ply)
+        sendBase(ply)
+        sendDoor(ply)
+    end)
+
+    net.receive("vwUseDoor", function(_, ply)
+        if DOOR_OWNER_ONLY and ply ~= owner() then return end
+        if timer.curtime() < nextUse then return end
+        if ply:getPos():getDistance(vehicle():getPos()) > DOOR_USE_DISTANCE + 300 then return end
+        nextUse = timer.curtime() + DOOR_TIME
+        doorOpen = not doorOpen
+        sendDoor()
+        pcall(function() vehicle():emitSound(DOOR_SOUND) end)
     end)
 
     return
@@ -60,6 +98,26 @@ end
 
 local parent = chip()
 local holos = {}
+local doorHolos = {}
+local materials = {}
+local door = {open = false, t = 0}
+
+local function ease(x)
+    x = math.clamp(x, 0, 1)
+    return x * x * (3 - 2 * x)
+end
+
+-- out from the van first, then back along the rail
+local function doorOffset(t)
+    return Vector(-DOOR_SLIDE * ease((t - 0.25) / 0.75), DOOR_OUT * ease(t / 0.25), 0)
+end
+
+local function placeDoor()
+    local localPos = OFFSET + doorOffset(door.t):getRotated(ANGLES)
+    for _, holo in ipairs(doorHolos) do
+        holo:setLocalPos(localPos)
+    end
+end
 
 local function attach()
     if not isValid(parent) then return end
@@ -70,6 +128,7 @@ local function attach()
         holo:setAngles(ang)
         holo:setParent(parent)
     end
+    placeDoor()
 end
 
 net.receive("vwBase", function()
@@ -81,14 +140,65 @@ net.receive("vwBase", function()
     end)
 end)
 
+net.receive("vwDoor", function()
+    door.open = net.readBool()
+end)
+
+hook.add("think", "vwDoorMove", function()
+    local goal = door.open and 1 or 0
+    if door.t == goal then return end
+    door.t = math.approach(door.t, goal, timer.frametime() / DOOR_TIME)
+    placeDoor()
+end)
+
+-- slab test against the door box, in the van's own space
+local function lookingAtDoor(eye, dir)
+    local boxMin = DOOR_BOX_MIN + doorOffset(door.t)
+    local boxMax = DOOR_BOX_MAX + doorOffset(door.t)
+    local near, far = 0, DOOR_USE_DISTANCE
+    for axis = 1, 3 do
+        if math.abs(dir[axis]) < 0.0001 then
+            if eye[axis] < boxMin[axis] or eye[axis] > boxMax[axis] then return false end
+        else
+            local a = (boxMin[axis] - eye[axis]) / dir[axis]
+            local b = (boxMax[axis] - eye[axis]) / dir[axis]
+            if a > b then a, b = b, a end
+            near, far = math.max(near, a), math.min(far, b)
+            if near > far then return false end
+        end
+    end
+    return true
+end
+
+hook.add("inputPressed", "vwDoorUse", function(key)
+    if key ~= KEY.E or not isValid(parent) then return end
+    local me = player()
+    if me:isTyping() or me:inVehicle() or (DOOR_OWNER_ONLY and me ~= owner()) then return end
+
+    local vanPos, vanAng = localToWorld(OFFSET, ANGLES, parent:getPos(), parent:getAngles())
+    local eye = worldToLocal(me:getEyePos(), Angle(), vanPos, vanAng)
+    local aim = worldToLocal(me:getEyePos() + me:getEyeAngles():getForward(), Angle(), vanPos, vanAng) - eye
+    if lookingAtDoor(eye, aim) then
+        net.start("vwUseDoor")
+        net.send()
+    end
+end)
+
+-- Starfall draws an image at its own size in the corner of the texture, so fill it
+local function fillTexture(mat, url, w, h, layout)
+    if layout then layout(0, 0, TEXTURE_SIZE, TEXTURE_SIZE) end
+end
+
 local function makeMaterial(name, file)
-    if file == false then return material.load(REAR_WINDOW_MATERIAL) end
+    if file == false then return material.load(INTERIOR_MATERIAL) end
+    if materials[file] then return materials[file] end
     local mat = material.create("VertexLitGeneric")
-    mat:setTextureURL("$basetexture", BASE_URL .. file)
+    mat:setTextureURL("$basetexture", BASE_URL .. file, fillTexture)
     if name == "glass" then
         mat:setInt("$flags", 2097152) -- translucent
         mat:setFloat("$alpha", GLASS_ALPHA)
     end
+    materials[file] = mat
     return mat
 end
 
@@ -100,8 +210,10 @@ local function build(meshes)
             holo:setMesh(partMesh)
             holo:setMeshMaterial(makeMaterial(name, file))
             holo:setRenderBounds(Vector(-RENDER_BOUNDS), Vector(RENDER_BOUNDS))
+            if file == false then holo:setColor(INTERIOR_COLOR) end
             if name == "glass" then holo:setRenderGroup(RENDERGROUP.TRANSLUCENT) end
             holos[#holos + 1] = holo
+            if name:sub(1, 5) == "door_" then doorHolos[#doorHolos + 1] = holo end
         else
             printConsole("VW Transporter: OBJ has no part called " .. name)
         end
