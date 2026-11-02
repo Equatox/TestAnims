@@ -1,0 +1,130 @@
+--@name VW Transporter
+--@author Bean
+--@shared
+
+----------    C O N F I G    ----------
+
+-- folder holding vw_transporter.obj and the textures. Must end in /
+local BASE_URL = "https://raw.githubusercontent.com/Equatox/TestAnims/main/vehicles/vw_transporter/"
+
+local MODEL_SCALE = 16.9              -- 16.9 is about real size
+local OFFSET = Vector(0, 0, 0)        -- from the Base prop or chip. The model's floor is at 0
+local ANGLES = Angle(0, 0, 0)         -- the model faces +X at 0
+local RENDER_BOUNDS = 300
+
+local GLASS_ALPHA = 0.45              -- windscreen and front door windows
+local REAR_WINDOW_MATERIAL = "models/debug/debugwhite"
+local LOAD_CPU = 0.4                  -- share of the CPU quota used while loading
+
+-- mesh name in the OBJ = texture file. false uses REAR_WINDOW_MATERIAL
+local PARTS = {
+    body = "livery.png",
+    solids = "solids.png",
+    tire = "vw_transporter_pneu.jpg",
+    under = "vw_transporter_dessous.jpg",
+    feuxar = "vw_transporter_feuxar.jpg",
+    clignot = "vw_transporter_clignot.jpg",
+    feuxred = "feuxred.jpg",
+    plate = "VW_plate.jpg",
+    glass = "glass.png",
+    rearwindow = false,
+}
+
+----------    S E R V E R    ----------
+
+if SERVER then
+    wire.adjustPorts({Base = "entity"})
+    local base = nil
+
+    local function send(target)
+        net.start("vwBase")
+        net.writeEntity(isValid(base) and base or chip())
+        net.send(target)
+    end
+
+    hook.add("Input", "vwBaseInput", function(name, value)
+        if name == "Base" then
+            base = value
+            send()
+        end
+    end)
+
+    hook.add("ClientInitialized", "vwSync", function(ply)
+        send(ply)
+    end)
+
+    return
+end
+
+----------    C L I E N T    ----------
+
+local parent = chip()
+local holos = {}
+
+local function attach()
+    if not isValid(parent) then return end
+    local pos, ang = localToWorld(OFFSET, ANGLES, parent:getPos(), parent:getAngles())
+    for _, holo in ipairs(holos) do
+        holo:setParent()
+        holo:setPos(pos)
+        holo:setAngles(ang)
+        holo:setParent(parent)
+    end
+end
+
+net.receive("vwBase", function()
+    net.readEntity(function(ent)
+        if isValid(ent) then
+            parent = ent
+            attach()
+        end
+    end)
+end)
+
+local function makeMaterial(name, file)
+    if file == false then return material.load(REAR_WINDOW_MATERIAL) end
+    local mat = material.create("VertexLitGeneric")
+    mat:setTextureURL("$basetexture", BASE_URL .. file)
+    if name == "glass" then
+        mat:setInt("$flags", 2097152) -- translucent
+        mat:setFloat("$alpha", GLASS_ALPHA)
+    end
+    return mat
+end
+
+local function build(meshes)
+    for name, file in pairs(PARTS) do
+        local partMesh = meshes[name]
+        if partMesh then
+            local holo = holograms.create(chip():getPos(), Angle(), "models/hunter/blocks/cube025x025x025.mdl", Vector(MODEL_SCALE))
+            holo:setMesh(partMesh)
+            holo:setMeshMaterial(makeMaterial(name, file))
+            holo:setRenderBounds(Vector(-RENDER_BOUNDS), Vector(RENDER_BOUNDS))
+            if name == "glass" then holo:setRenderGroup(RENDERGROUP.TRANSLUCENT) end
+            holos[#holos + 1] = holo
+        else
+            printConsole("VW Transporter: OBJ has no part called " .. name)
+        end
+    end
+    attach()
+end
+
+http.get(BASE_URL .. "vw_transporter.obj", function(body)
+    local meshes = nil
+    local load = coroutine.wrap(function()
+        meshes = mesh.createFromObj(body, true)
+        return true
+    end)
+
+    hook.add("think", "vwLoad", function()
+        while cpuAverage() < cpuMax() * LOAD_CPU do
+            if load() then
+                hook.remove("think", "vwLoad")
+                build(meshes)
+                return
+            end
+        end
+    end)
+end, function(reason)
+    printConsole("VW Transporter: download failed (" .. tostring(reason) .. ")")
+end)
