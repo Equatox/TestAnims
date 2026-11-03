@@ -50,6 +50,19 @@ local CLIP_SONG_RESTARTS = {
     ["dances/hips_sway"] = true,
     ["emotes/private_property"] = true,
 }
+-- clips that stop after one play, instead of looping
+local CLIP_PLAY_ONCE = {
+    ["emotes/private_property"] = true,
+}
+-- a transparent picture shown with a clip. It faces the side of the model at left: x forward, y left, z up
+-- pos is the picture's centre from your feet. size is its width and height in units
+local CLIP_PICTURE = {
+    ["emotes/private_property"] = {
+        image = "images/private_property_truck.png",
+        pos = Vector(-22, 16, 59.3),
+        size = {291.6, 164.3},
+    },
+}
 -- stretches the model during a clip: front to back, side to side, height
 local CLIP_SCALE = {
     ["dances/wide_walk"] = Vector(1.6, 2.2, 1),
@@ -74,7 +87,7 @@ local WHEEL_NO_RELOAD = {weapon_physgun = true, gmod_tool = true} -- R won't als
 
 local WHEEL_CLIPS = {
     {"Dances", "dances", "wide_walk hips_sway rick_roll car_shearer dr_livesey california_gurls gangnam_style flair 0_to_100 bailegetdown breakdance breakdance_2 bubbletop1 caramelldansen feelings_motion__vmd fighter_vmd francium galaxias__vmd geddan head_spin hip_hop_dancing macarena_dance peakaboo running_man_slav shuffling snake sweet_dreams_vmd take_on_me the_other_side1_1_vmd twerk work_bitch_vmd"},
-    {"Emotes", "emotes", "private_property 0005_damage0015_fly_circle 1h_sword_swing_low_left_humanoid anime_salute back_kick blowkiss brazilian_kick combo_hits_one_one combo_when_surrounded cqc dab death deathlonger defensive_side_kick flip_off flip_off_hard front_kick hit human_hit_01 hurricane_kick hurricane_kickmodified kicking launcher low_kick mma_combo_kick_and_spinning_back_kick mma_combo_kick_and_spinning_back_kick_001_001 mma_left_high_kick mma_left_low_kick mma_right_high_kick mma_right_low_kick mma_side_kick mma_spinning_back_kick mutant_roaring mutant_slash pathead_00 punch punch_2 punching pushedaround roundhouse run_to_dive salute salute_1 salutelongermia sky_upper soccer_tackle soccer_tackled stabbing zombie_atack1 zombie_atack2 zombie_reaction_hit1 zombie_reaction_hit2"},
+    {"Emotes", "emotes", "private_property 0005_damage 0015_fly_circle 1h_sword_swing_low_left_humanoid anime_salute back_kick blowkiss brazilian_kick combo_hits_one_one combo_when_surrounded cqc dab death deathlonger defensive_side_kick flip_off flip_off_hard front_kick hit human_hit_01 hurricane_kick hurricane_kickmodified kicking launcher low_kick mma_combo_kick_and_spinning_back_kick mma_combo_kick_and_spinning_back_kick_001_001 mma_left_high_kick mma_left_low_kick mma_right_high_kick mma_right_low_kick mma_side_kick mma_spinning_back_kick mutant_roaring mutant_slash pathead_00 punch punch_2 punching pushedaround roundhouse run_to_dive salute salute_1 salutelongermia sky_upper soccer_tackle soccer_tackled stabbing zombie_atack1 zombie_atack2 zombie_reaction_hit1 zombie_reaction_hit2"},
     {"TF2 Spy", "tf2_spy", "03 04 05 a_reference aerobic_a aerobic_a_start aerobic_b aerobic_b_start brutallegendin brutallegendinterior brutallegendout buy_a_life conga dosido_dance dosido_intro flip_start flip_success_initiator flip_success_receiver headbutt_start headbutt_success hifivesuccess hifivesuccessfull highfivestart laugh layer_dieviolent primary_death_backstab primary_death_burning primary_death_headshot ragdollspawn rps_paper rps_paper_lose rps_paper_win rps_rock rps_rock_lose rps_rock_win rps_scissors rps_scissors_lose rps_scissors_win rps_start russian secondary_taunt selectionmenu_anim01 spy_replay spy_replay_taunt taunt06 taunt_vehicle_allclass_honk vehicle_allclass_end vehicle_allclass_honk vehicle_allclass_spawn vehicle_allclass_start_layer yeti_layer yeti_prop yetipunch"},
 }
 
@@ -183,6 +196,45 @@ local function buildStandIn()
     modelAnimator.animateSetup(standIn, nil, target)
 end
 
+local picture, pictureName = nil, nil
+
+local function hidePicture()
+    if picture and picture:isValid() then picture:setNoDraw(true) end
+end
+
+local function fillTexture(_, _, _, _, layout)
+    if layout then layout(0, 0, 1024, 1024) end
+end
+
+local function buildPicture(name)
+    local info = CLIP_PICTURE[name]
+    if pictureName ~= name then
+        if picture and picture:isValid() then picture:remove() end
+        picture, pictureName = nil, name
+        if not info then return end
+        local x, z, w, h = info.pos[1], info.pos[3], info.size[1] / 2, info.size[2] / 2
+        local y = info.pos[2]
+        local function corner(px, pz, u, v)
+            return {pos = Vector(px, y, pz), normal = Vector(0, 1, 0), u = u, v = v}
+        end
+        -- seen from its side, forward is on the left of the picture
+        local a, b = corner(x + w, z + h, 0, 0), corner(x + w, z - h, 0, 1)
+        local c, d = corner(x - w, z - h, 1, 1), corner(x - w, z + h, 1, 0)
+        local quad = mesh.createFromTable({a, b, c, a, c, d})
+        local mat = material.create("VertexLitGeneric")
+        mat:setTextureURL("$basetexture", BASE_URL .. info.image, fillTexture)
+        mat:setInt("$flags", 2097152 + 8192) -- uses the image's transparency, drawn from both sides
+        mat:recompute()
+        picture = holograms.create(target:getPos(), Angle(0, target:getAngles()[2], 0), "models/hunter/blocks/cube025x025x025.mdl")
+        picture:setMesh(quad)
+        picture:setMeshMaterial(mat)
+        picture:setRenderBounds(Vector(-RENDER_BOUNDS * 3), Vector(RENDER_BOUNDS * 3))
+        picture:setRenderGroup(RENDERGROUP.TRANSLUCENT)
+        picture:setColor(Color(255, 255, 255, 254)) -- anything under full alpha switches on see-through drawing
+    end
+    if picture and picture:isValid() then picture:setNoDraw(false) end
+end
+
 local function setup()
     if not isValid(target) or readyModel == target:getModel() then return end
     modelAnimator.stop()
@@ -200,6 +252,7 @@ local function showAnimated(active)
         standIn:setNoDraw(not active or (isOwner and not OWNER_THIRD_PERSON))
     end
     setPlayerHidden(active)
+    if not active then hidePicture() end
 end
 
 local song = nil
@@ -224,7 +277,7 @@ local function startSong()
 end
 
 local function onFinished()
-    if LOOP then
+    if LOOP and not CLIP_PLAY_ONCE[requested] then
         if song and song:isValid() and not songRunsOn then
             song:pause()
             song:setTime(0)
@@ -234,6 +287,11 @@ local function onFinished()
         modelAnimator.stop()
         showAnimated(false)
         stopSong()
+        if isOwner then
+            net.start("animPick")
+            net.writeString("")
+            net.send()
+        end
     end
 end
 
@@ -241,9 +299,15 @@ local function startClip(name)
     if requested ~= name then return end
     setup()
     startSong()
-    modelAnimator.setPoseScale(CLIP_SCALE[name])
-    modelAnimator.playAnimation(name, LOOP, onFinished)
+    if modelAnimator.setPoseScale then
+        modelAnimator.setPoseScale(CLIP_SCALE[name])
+    elseif CLIP_SCALE[name] then
+        printConsole("animPlayer: libs/modelAnimator.txt is an old copy, so this clip can't stretch")
+    end
+    modelAnimator.playAnimation(name, LOOP and not CLIP_PLAY_ONCE[name], onFinished)
     showAnimated(true)
+    hidePicture()
+    buildPicture(name)
     if DEBUG then
         timer.simple(1, function()
             printConsole("animPlayer: " .. modelAnimator.debugInfo()
@@ -314,6 +378,10 @@ hook.add("think", "animStandInFollow", function()
     if not (standIn and standIn:isValid()) or not isValid(target) then return end
     standIn:setPos(target:getPos())
     standIn:setAngles(Angle(0, target:getAngles()[2], 0))
+    if picture and picture:isValid() then
+        picture:setPos(target:getPos())
+        picture:setAngles(Angle(0, target:getAngles()[2], 0))
+    end
 end)
 
 ----------    A N I M A T I O N   W H E E L    ----------
