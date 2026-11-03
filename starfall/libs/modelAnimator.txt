@@ -1,0 +1,500 @@
+--@name Nakkitsunami/libs/modelAnimator.txt
+--@author Nakkitsunami, patched for baked ValveBiped clips
+--@client
+--[[
+
+    Simple animation library by Nakkitsunami
+
+    Frame data is relative to the model's origin:
+
+    {-- entire animation
+        {-- frame 1
+            {pitch, yaw, roll, x, y, z},-- bone 1 data
+            {pitch, yaw, roll, x, y, z},-- bone 2 data
+            ...
+        },
+        {-- frame 2
+            ...
+        }
+    }
+
+    Baked clips also carry a "bones" name list, so data always reaches the
+    right bone. Without one, data is matched to bones in registration order.
+
+    Functions are listed below.
+
+--]]
+
+
+----------    V A R I A B L E S    ----------
+
+
+modelAnimator = {}
+
+local RAD = math.pi / 180
+local sin, cos = math.sin, math.cos
+
+local animationLibrary = {}
+
+local animate = nil
+local bones = {}      -- skeleton in parent-before-child order
+local boneByName = {}
+
+local bound = false   -- matrices have been handed to the entity
+local isAnimationPlaying = false
+local clip = nil
+
+local currentAnimationName = nil
+local lastAnimationName = nil
+local looping = false
+local finishedCallback = nil
+local fps = 30
+
+local frame = 1
+local lastFrame = 0
+local lastCT = 0
+
+local clientTargetFPS = 0  -- 0 = update every frame
+local skipFrame = false
+
+-- setBoneMatrix(bone, nil) needs the StarfallEx edit in README.txt. Without it, a
+-- real player's bones could never be released, so playing on one is refused
+local canRelease = false
+
+-- hands every bone back to the game's own animation
+local function release()
+    if canRelease and isValid(animate) then
+        for _, entry in ipairs(bones) do
+            if entry.bound then
+                animate:setBoneMatrix(entry.id, nil)
+                entry.bound = false
+            end
+            entry.ready = nil
+            entry.active = false
+        end
+        animate:setupBones()
+        bound = false
+    end
+    clip = nil
+    lastFrame = 0
+end
+
+
+----------    F U N C T I O N S   B E L O W    ----------
+
+
+-- modelAnimator.animateSetup(entity ent, table customBones, entity poseSource)
+-- defines the animate entity and writes down its bones
+-- customBones limits the library to those bone names, in that order
+-- poseSource supplies the relative pose of helper bones (ulna, bicep, etc.)
+-- use it when ent is a hologram, as those aren't animated. Default is ent
+modelAnimator.animateSetup = function(ent, customBones, poseSource)
+    if not isValid(ent) then return end
+    animate = ent
+    bones, boneByName = {}, {}
+    bound, isAnimationPlaying, clip, lastFrame = false, false, nil, 0
+
+    canRelease = pcall(ent.setBoneMatrix, ent, 0, nil)
+    if ent:isPlayer() and not canRelease then
+        printConsole("modelAnimator: StarfallEx can't release bones, so real players can't be animated. Use a stand-in")
+    end
+
+    local source = isValid(poseSource) and poseSource or ent
+    source:setupBones()
+
+    local function add(id, name)
+        local entry = {id = id, name = name, mat = Matrix(), l = {}, w = {}, slot = nil, rel = nil, parent = nil}
+        bones[#bones + 1] = entry
+        boneByName[name] = entry
+    end
+
+    if customBones then
+        for _, name in ipairs(customBones) do
+            local id = ent:lookupBone(name)
+            if id then add(id, name) end
+        end
+    else
+        for i = 0, ent:getBoneCount() - 1 do
+            local name = ent:getBoneName(i)
+            if name ~= "__INVALIDBONE__" then add(i, name) end
+        end
+
+        -- remember how each bone sits on its parent, for bones a clip doesn't drive
+        for _, entry in ipairs(bones) do
+            local parentId = ent:getBoneParent(entry.id)
+            local parent = parentId and parentId >= 0 and boneByName[ent:getBoneName(parentId)]
+            if parent then
+                entry.parent = parent
+                local childMat = source:getBoneMatrix(source:lookupBone(entry.name) or entry.id)
+                local parentMat = source:getBoneMatrix(source:lookupBone(parent.name) or parent.id)
+                if childMat and parentMat then
+                    entry.rel = {(parentMat:getInverseTR() * childMat):unpack()}
+                end
+            end
+        end
+    end
+    printConsole("Animate registered successfully! Bones: " .. #bones)
+end
+
+
+-- modelAnimator.addAnimation(table animationData)
+-- adds animation using the following keys:
+--    name (string, name used in storing the animation)
+--    frames (table, animation frames per bone)
+--    fps (number, fps of the animation)
+--    bones (optional table, bone names matching the order of each frame's data)
+modelAnimator.addAnimation = function(animationData)
+    local slots = nil
+    if animationData.bones then
+        slots = {}
+        for i, name in ipairs(animationData.bones) do slots[name] = i end
+    end
+    animationLibrary[animationData.name] = {
+        animFrames = animationData.frames,
+        animFPS = animationData.fps,
+        animFrameCount = #animationData.frames,
+        slots = slots
+    }
+    printConsole("Animation registered: " .. animationData.name)
+end
+
+
+-- modelAnimator.loadAnimation(string url, function callback, string name)
+-- downloads a baked clip and registers it, under name if given
+-- callback receives its name, or nil and an error
+modelAnimator.loadAnimation = function(url, callback, name)
+    http.get(url, function(body)
+        -- Starfall rejects patterns on long strings, so clips are read with plain finds
+        local framesAt = body:find('"frames":[', 1, true)
+        local header = framesAt and body:sub(1, framesAt) or ""
+
+        local function between(before, after)
+            local _, from = header:find(before, 1, true)
+            if not from then return nil end
+            local to = header:find(after, from + 1, true)
+            return to and header:sub(from + 1, to - 1)
+        end
+
+        local clipName = name or between('"name":"', '"')
+        local clipFPS = tonumber(between('"fps":', ',') or "")
+        local boneList = between('"bones":[', ']')
+        if not (clipName and clipFPS and boneList) then
+            if callback then callback(nil, "Not a baked clip: " .. url) end
+            return
+        end
+
+        -- json.decode on a whole clip exceeds other players' CPU quota, so this
+        -- only finds where each frame sits. loadPose reads them as they play
+        local slots = {}
+        for i, boneName in ipairs(string.explode('","', boneList:sub(2, -2))) do
+            slots[boneName] = i
+        end
+
+        local starts, ends, frames = {}, {}, 0
+        local pos = framesAt + 10
+        while true do
+            local finish = body:find("]]", pos, true)
+            if not finish then break end
+            frames = frames + 1
+            starts[frames], ends[frames] = pos, finish
+            pos = finish + 3
+        end
+
+        animationLibrary[clipName] = {
+            raw = body,
+            starts = starts,
+            ends = ends,
+            animFPS = clipFPS,
+            animFrameCount = frames,
+            slots = slots
+        }
+        printConsole("Animation registered: " .. clipName)
+        if callback then callback(clipName) end
+    end, function(reason)
+        if callback then callback(nil, reason) end
+    end)
+end
+
+
+-- modelAnimator.playAnimation(string name,boolean setLooping, function callback,number setFrame,number setFPS,number animationRate)
+-- plays animation
+-- all except name are optional
+-- setFPS and animationRate can't be used at the same time
+-- callback will be ran even if setLooping is on
+modelAnimator.playAnimation = function(name, setLooping, callback, setFrame, setFPS, animationRate)
+    local findAnim = animationLibrary[name]
+    if findAnim == nil or not isValid(animate) then return end
+    if animate:isPlayer() and not canRelease then
+        printConsole("modelAnimator: not playing on a player, as StarfallEx couldn't release its bones. Use a stand-in")
+        return
+    end
+
+    lastAnimationName = currentAnimationName
+    currentAnimationName = name
+    clip = findAnim
+    looping = setLooping == true
+    finishedCallback = callback
+    frame = setFrame or 1
+    lastFrame = 0
+    fps = setFPS or findAnim.animFPS * (animationRate or 1)
+
+    for i, entry in ipairs(bones) do
+        if findAnim.slots then
+            entry.slot = findAnim.slots[entry.name]
+        else
+            entry.slot = i
+        end
+    end
+
+    lastCT = timer.curtime()
+    isAnimationPlaying = true
+    printConsole("Now playing animation: " .. name)
+end
+
+
+-- modelAnimator.stop()
+-- stops the animation and returns the bones to the game's own animation
+modelAnimator.stop = function()
+    isAnimationPlaying = false
+    release()
+end
+
+
+-- modelAnimator.isPlaying()
+-- returns whether an animation is advancing
+modelAnimator.isPlaying = function()
+    return isAnimationPlaying
+end
+
+
+-- modelAnimator.animations()
+-- returns table of animation names
+modelAnimator.animations = function()
+    return table.getKeys(animationLibrary)
+end
+
+
+-- modelAnimator.getAnimationData(string name)
+-- returns table with following data:
+--    frames
+--    fps
+--    length
+modelAnimator.getAnimationData = function(name)
+    local findAnim = animationLibrary[name]
+    if findAnim == nil then return end
+    return {
+        frames = findAnim.animFrameCount,
+        fps = findAnim.animFPS,
+        length = math.round(findAnim.animFrameCount / findAnim.animFPS, 1) -- seconds
+    }
+end
+
+
+-- modelAnimator.debugInfo()
+-- returns a line describing whether bone overrides are reaching the model
+modelAnimator.debugInfo = function()
+    if not isValid(animate) then return "no animate entity" end
+    local pelvis = boneByName["ValveBiped.Bip01_Pelvis"] or bones[1]
+    local info = "playing=" .. tostring(isAnimationPlaying) .. " frame=" .. math.floor(frame) .. "/" .. tostring(clip and clip.animFrameCount)
+        .. " bones=" .. #bones .. " dormant=" .. tostring(animate:isDormant()) .. " applied=" .. tostring(bound)
+    if pelvis and pelvis.ready then
+        animate:setupBones()
+        local actual = animate:getBoneMatrix(pelvis.id):getTranslation()
+        local w = pelvis.w
+        info = info .. " pelvisError=" .. math.round(actual:getDistance(Vector(w[4], w[8], w[12])), 2)
+    end
+    return info
+end
+
+
+-- modelAnimator.setClientTargetFPS(number newClientTargetFPS)
+-- below this fps, bones update every second frame. 0 disables this
+modelAnimator.setClientTargetFPS = function(newClientTargetFPS)
+    clientTargetFPS = newClientTargetFPS
+end
+
+
+-- modelAnimator.currentAnimationName()
+-- returns the name of current animation
+modelAnimator.currentAnimationName = function()
+    return currentAnimationName
+end
+
+
+-- modelAnimator.lastAnimationName()
+-- returns the name of previous animation
+modelAnimator.lastAnimationName = function()
+    return lastAnimationName
+end
+
+
+----------    C O D E   B E L O W    ----------
+
+
+-- expands one bone's data into 3x4 rows relative to the model
+local function setLocal(entry, pitch, yaw, roll, x, y, z)
+    local sp, cp = sin(pitch * RAD), cos(pitch * RAD)
+    local sy, cy = sin(yaw * RAD), cos(yaw * RAD)
+    local sr, cr = sin(roll * RAD), cos(roll * RAD)
+    local l = entry.l
+    l[1], l[2], l[3], l[4] = cp * cy, sr * sp * cy - cr * sy, cr * sp * cy + sr * sy, x
+    l[5], l[6], l[7], l[8] = cp * sy, sr * sp * sy + cr * cy, cr * sp * sy - sr * cy, y
+    l[9], l[10], l[11], l[12] = -sp, sr * cp, cr * cp, z
+    entry.active = true
+end
+
+local frameValues = {}
+
+local function loadPose(index)
+    if clip.raw then
+        local count = 0
+        for number in clip.raw:sub(clip.starts[index], clip.ends[index]):gmatch("[%-%d%.]+") do
+            count = count + 1
+            frameValues[count] = tonumber(number)
+        end
+        local v = frameValues
+        for _, entry in ipairs(bones) do
+            local base = entry.slot and (entry.slot - 1) * 6
+            if base and base + 6 <= count then
+                setLocal(entry, v[base + 1], v[base + 2], v[base + 3], v[base + 4], v[base + 5], v[base + 6])
+            else
+                entry.active = false
+            end
+        end
+    else
+        local frameData = clip.animFrames[index]
+        for _, entry in ipairs(bones) do
+            local d = entry.slot and frameData[entry.slot]
+            if d then
+                setLocal(entry, d[1], d[2], d[3], d[4], d[5], d[6])
+            else
+                entry.active = false
+            end
+        end
+    end
+end
+
+
+local poseScale = nil
+
+-- modelAnimator.setPoseScale(Vector scale)
+-- x is front to back, y is side to side, z is height. nil returns to normal
+modelAnimator.setPoseScale = function(scale)
+    poseScale = scale
+end
+
+-- moves every bone to the current pose in world space, without allocating
+local function applyPose()
+    local pos = animate:getPos()
+    local px, py, pz = pos[1], pos[2], pos[3]
+    local a, b, c, d, e, f, g, h, i
+
+    if animate:isPlayer() then
+        -- a player's pitch would tip the whole body, so only yaw is used
+        local yaw = animate:getAngles()[2] * RAD
+        local s, co = sin(yaw), cos(yaw)
+        a, b, c, d, e, f, g, h, i = co, -s, 0, s, co, 0, 0, 0, 1
+    else
+        local fwd, right, up = animate:getForward(), animate:getRight(), animate:getUp()
+        a, b, c = fwd[1], -right[1], up[1]
+        d, e, f = fwd[2], -right[2], up[2]
+        g, h, i = fwd[3], -right[3], up[3]
+    end
+
+    -- stretches the whole pose along the model's own axes
+    if poseScale then
+        a, d, g = a * poseScale[1], d * poseScale[1], g * poseScale[1]
+        b, e, h = b * poseScale[2], e * poseScale[2], h * poseScale[2]
+        c, f, i = c * poseScale[3], f * poseScale[3], i * poseScale[3]
+    end
+
+    for _, entry in ipairs(bones) do
+        local w = entry.w
+        local r = nil
+        if entry.active then
+            local l = entry.l
+            w[1], w[2], w[3] = a * l[1] + b * l[5] + c * l[9], a * l[2] + b * l[6] + c * l[10], a * l[3] + b * l[7] + c * l[11]
+            w[5], w[6], w[7] = d * l[1] + e * l[5] + f * l[9], d * l[2] + e * l[6] + f * l[10], d * l[3] + e * l[7] + f * l[11]
+            w[9], w[10], w[11] = g * l[1] + h * l[5] + i * l[9], g * l[2] + h * l[6] + i * l[10], g * l[3] + h * l[7] + i * l[11]
+            w[4] = a * l[4] + b * l[8] + c * l[12] + px
+            w[8] = d * l[4] + e * l[8] + f * l[12] + py
+            w[12] = g * l[4] + h * l[8] + i * l[12] + pz
+            r = true
+        elseif entry.rel and entry.parent and entry.parent.ready then
+            local p, l = entry.parent.w, entry.rel
+            for row = 0, 2 do
+                local m = row * 4
+                local p1, p2, p3 = p[m + 1], p[m + 2], p[m + 3]
+                w[m + 1] = p1 * l[1] + p2 * l[5] + p3 * l[9]
+                w[m + 2] = p1 * l[2] + p2 * l[6] + p3 * l[10]
+                w[m + 3] = p1 * l[3] + p2 * l[7] + p3 * l[11]
+                w[m + 4] = p1 * l[4] + p2 * l[8] + p3 * l[12] + p[m + 4]
+            end
+            r = true
+        end
+        entry.ready = r
+        if r then
+            entry.mat:setUnpacked(w[1], w[2], w[3], w[4], w[5], w[6], w[7], w[8], w[9], w[10], w[11], w[12], 0, 0, 0, 1)
+            if not entry.bound then
+                animate:setBoneMatrix(entry.id, entry.mat)
+                entry.bound = true
+            end
+        end
+    end
+    bound = true
+    animate:setupBones()
+end
+
+
+local boneAnimateHook = "modelAnimator:think"
+hook.add("think", boneAnimateHook, function()
+    if not isValid(animate) or clip == nil then return end
+    if animate:isDormant() then return end
+
+    if isAnimationPlaying then
+        local CT = timer.curtime()
+        frame = frame + (CT - lastCT) * fps
+        lastCT = CT
+
+        if frame >= clip.animFrameCount + 1 then
+            local callback = finishedCallback
+            if looping then
+                frame = 1
+            else
+                frame = clip.animFrameCount
+                isAnimationPlaying = false
+                lastAnimationName = currentAnimationName
+            end
+            if callback then callback() end
+            if not isAnimationPlaying then
+                release()
+                return
+            end
+        end
+
+    end
+
+    -- a skipped update is better than a half-updated skeleton
+    if cpuAverage() > cpuMax() * 0.75 then return end
+
+    if clientTargetFPS > 0 and 1 / timer.frametime() < clientTargetFPS then
+        skipFrame = not skipFrame
+        if skipFrame then return end
+    end
+
+    if isAnimationPlaying then
+        local frameRound = math.clamp(math.floor(frame), 1, clip.animFrameCount)
+        if frameRound ~= lastFrame then
+            lastFrame = frameRound
+            loadPose(frameRound)
+        end
+    end
+
+    if lastFrame == 0 then return end
+
+    applyPose()
+end)
+
+hook.add("Removed", "modelAnimator:release", function()
+    release()
+end)

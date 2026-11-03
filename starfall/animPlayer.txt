@@ -1,0 +1,492 @@
+--@name Baked Animation Player
+--@author Bean
+--@shared
+--@include libs/modelAnimator.txt
+
+----------    C O N F I G    ----------
+
+local BASE_URL = "https://raw.githubusercontent.com/Equatox/TestAnims/main/"
+local STARTING_CLIP = ""          -- e.g. "dances/macarena_dance". Blank plays nothing on spawn
+local COMMAND = "!anim"           -- "!anim dances/macarena_dance", "!anim stop"
+local LOOP = true
+
+-- true:  hides your player and animates a hologram of it
+-- false: animates your real player's bones. Needs an edit to StarfallEx on the server
+local USE_STAND_IN = true
+
+-- how the real player is hidden while the stand-in plays. Neither moves the player itself:
+-- "sink":   drops only the drawn model underground. Collision and position stay where they are
+-- "shrink": collapses the drawn model to almost nothing
+local HIDE_MODE = "sink"
+local SINK_DEPTH = 4096
+
+-- your own view while a clip plays. The stand-in's head would block a first person camera
+local OWNER_THIRD_PERSON = true
+local CAM_BACK = 110
+local CAM_UP = 10
+
+-- prints a status line to console 1 second after a clip starts
+local DEBUG = true
+
+local RENDER_BOUNDS = 150
+
+-- clips with a song, played from your position while the clip runs
+local CLIP_AUDIO = {
+    ["dances/california_gurls"] = "audio/california_gurls.mp3",
+    ["dances/geddan"] = "audio/getdown.mp3",
+    ["dances/caramelldansen"] = "audio/caramelldansen.mp3",
+    ["tf2_spy/russian"] = "audio/kazotsky_kick.mp3",
+    ["tf2_spy/conga"] = "audio/tf2_conga.mp3",
+    ["dances/gangnam_style"] = "audio/gangnam_style.mp3",
+    ["dances/hips_sway"] = "audio/hips_sway.mp3",
+    ["dances/rick_roll"] = "audio/rick_roll.mp3",
+    ["dances/car_shearer"] = "audio/car_shearer.mp3",
+    ["dances/dr_livesey"] = "audio/dr_livesey.mp3",
+    ["dances/wide_walk"] = "audio/wide_walk.mp3",
+}
+-- a song longer than its clip normally keeps looping by itself. These restart with the clip instead
+local CLIP_SONG_RESTARTS = {
+    ["dances/hips_sway"] = true,
+}
+-- stretches the model during a clip: front to back, side to side, height
+local CLIP_SCALE = {
+    ["dances/wide_walk"] = Vector(1.6, 2.2, 1),
+}
+-- seconds after a clip starts or loops before its song begins
+local CLIP_AUDIO_DELAY = {
+    ["dances/geddan"] = 2.5,
+}
+local AUDIO_VOLUME = 1
+local AUDIO_FADE_MIN = 400        -- full volume inside this range
+local AUDIO_FADE_MAX = 2500       -- silent beyond this range
+
+-- animation wheel: hold the key, aim at a clip, release to play it
+-- left click: next wheel, right click: previous wheel
+local WHEEL_KEY = "R"             -- any name from the KEY enum
+local STOP_KEY = "H"              -- stops the current clip
+local WHEEL_SLICES = 12           -- slots per wheel, including Stop
+local WHEEL_RADIUS = 230
+local WHEEL_WIDEN = 1.35           -- stretches the wheel sideways so labels don't overlap
+local WHEEL_DEADZONE = 70         -- release inside this radius to cancel
+local WHEEL_NO_RELOAD = {weapon_physgun = true, gmod_tool = true} -- R won't also fire these while the chip runs
+
+local WHEEL_CLIPS = {
+    {"Dances", "dances", "wide_walk hips_sway rick_roll car_shearer dr_livesey california_gurls gangnam_style flair 0_to_100 bailegetdown breakdance breakdance_2 bubbletop1 caramelldansen feelings_motion__vmd fighter_vmd francium galaxias__vmd geddan head_spin hip_hop_dancing macarena_dance peakaboo running_man_slav shuffling snake sweet_dreams_vmd take_on_me the_other_side1_1_vmd twerk work_bitch_vmd"},
+    {"Emotes", "emotes", "0005_damage 0015_fly_circle 1h_sword_swing_low_left_humanoid anime_salute back_kick blowkiss brazilian_kick combo_hits_one_one combo_when_surrounded cqc dab death deathlonger defensive_side_kick flip_off flip_off_hard front_kick hit human_hit_01 hurricane_kick hurricane_kickmodified kicking launcher low_kick mma_combo_kick_and_spinning_back_kick mma_combo_kick_and_spinning_back_kick_001_001 mma_left_high_kick mma_left_low_kick mma_right_high_kick mma_right_low_kick mma_side_kick mma_spinning_back_kick mutant_roaring mutant_slash pathead_00 punch punch_2 punching pushedaround roundhouse run_to_dive salute salute_1 salutelongermia sky_upper soccer_tackle soccer_tackled stabbing zombie_atack1 zombie_atack2 zombie_reaction_hit1 zombie_reaction_hit2"},
+    {"TF2 Spy", "tf2_spy", "03 04 05 a_reference aerobic_a aerobic_a_start aerobic_b aerobic_b_start brutallegendin brutallegendinterior brutallegendout buy_a_life conga dosido_dance dosido_intro flip_start flip_success_initiator flip_success_receiver headbutt_start headbutt_success hifivesuccess hifivesuccessfull highfivestart laugh layer_dieviolent primary_death_backstab primary_death_burning primary_death_headshot ragdollspawn rps_paper rps_paper_lose rps_paper_win rps_rock rps_rock_lose rps_rock_win rps_scissors rps_scissors_lose rps_scissors_win rps_start russian secondary_taunt selectionmenu_anim01 spy_replay spy_replay_taunt taunt06 taunt_vehicle_allclass_honk vehicle_allclass_end vehicle_allclass_honk vehicle_allclass_spawn vehicle_allclass_start_layer yeti_layer yeti_prop yetipunch"},
+}
+
+----------    S E R V E R    ----------
+
+if SERVER then
+    local current = STARTING_CLIP
+
+    -- only works with sf_permissions_entity_owneraccess 1. The clients hide you either way
+    local function hideOwner(hidden)
+        if USE_STAND_IN then pcall(function() owner():setNoDraw(hidden) end) end
+    end
+    hideOwner(current ~= "")
+
+    local function send(target)
+        net.start("animClip")
+        net.writeString(current)
+        net.send(target)
+    end
+
+    hook.add("PlayerSay", "animCommand", function(ply, text)
+        if ply ~= owner() or text:sub(1, #COMMAND + 1) ~= COMMAND .. " " then return end
+        local arg = text:sub(#COMMAND + 2):lower()
+        current = arg == "stop" and "" or arg
+        hideOwner(current ~= "")
+        send()
+        return ""
+    end)
+
+    hook.add("ClientInitialized", "animSync", function(ply)
+        send(ply)
+    end)
+
+    net.receive("animPick", function(_, ply)
+        if ply ~= owner() then return end
+        current = net.readString()
+        hideOwner(current ~= "")
+        send()
+    end)
+
+    hook.add("Removed", "animRestoreServer", function()
+        hideOwner(false)
+    end)
+
+    return
+end
+
+----------    C L I E N T    ----------
+
+require("libs/modelAnimator.txt")
+
+local target = owner()
+local isOwner = player() == target
+local standIn = nil
+local readyModel = nil
+local requested = nil
+local loaded = {}
+
+local wantHidden = false
+local hiddenWeapon = nil
+
+local function setWeaponHidden(weapon, hidden)
+    if isValid(weapon) then pcall(weapon.setNoDraw, weapon, hidden) end
+end
+
+-- the game can re-show the player or a newly drawn weapon, so this runs every frame
+local function applyHidden()
+    if not isValid(target) then return end
+    if wantHidden and not target:getNoDraw() then target:setNoDraw(true) end
+
+    local weapon = wantHidden and target:getActiveWeapon() or nil
+    if weapon ~= hiddenWeapon then
+        setWeaponHidden(hiddenWeapon, false)
+        hiddenWeapon = isValid(weapon) and weapon or nil
+    end
+    if hiddenWeapon then setWeaponHidden(hiddenWeapon, true) end
+end
+
+local function setPlayerHidden(hidden)
+    if wantHidden ~= hidden and isValid(target) then
+        if HIDE_MODE == "sink" then
+            local root = target:lookupBone("ValveBiped.Bip01_Pelvis") or 0
+            target:manipulateBonePosition(root, Vector(0, 0, hidden and -SINK_DEPTH or 0))
+        else
+            local scale = hidden and Vector(0.001) or Vector(1)
+            for bone = 0, target:getBoneCount() - 1 do
+                target:manipulateBoneScale(bone, scale)
+            end
+        end
+    end
+    wantHidden = hidden
+    if not hidden and isValid(target) then target:setNoDraw(false) end
+    applyHidden()
+end
+
+local function buildStandIn()
+    if standIn and standIn:isValid() then standIn:remove() end
+    standIn = holograms.create(target:getPos(), Angle(0, target:getAngles()[2], 0), target:getModel())
+    standIn:setRenderBounds(Vector(-RENDER_BOUNDS), Vector(RENDER_BOUNDS))
+    standIn:setSkin(target:getSkin())
+    for _, group in ipairs(target:getBodygroups()) do
+        standIn:setBodygroup(group.id, target:getBodygroup(group.id))
+    end
+    standIn:setColor(target:getColor())
+    standIn:setNoDraw(true)
+    modelAnimator.animateSetup(standIn, nil, target)
+end
+
+local function setup()
+    if not isValid(target) or readyModel == target:getModel() then return end
+    modelAnimator.stop()
+    readyModel = target:getModel()
+    if USE_STAND_IN then
+        buildStandIn()
+    else
+        modelAnimator.animateSetup(target)
+    end
+end
+
+local function showAnimated(active)
+    if not USE_STAND_IN then return end
+    if standIn and standIn:isValid() then
+        standIn:setNoDraw(not active or (isOwner and not OWNER_THIRD_PERSON))
+    end
+    setPlayerHidden(active)
+end
+
+local song = nil
+local songRunsOn = false  -- longer than its clip, so it keeps playing as the clip loops
+
+local function stopSong()
+    timer.remove("animSongDelay")
+    if song and song:isValid() then song:stop() end
+    song = nil
+end
+
+local function startSong()
+    if not (song and song:isValid()) then return end
+    local delay = CLIP_AUDIO_DELAY[requested]
+    if delay then
+        timer.create("animSongDelay", delay, 1, function()
+            if song and song:isValid() then song:play() end
+        end)
+    else
+        song:play()
+    end
+end
+
+local function onFinished()
+    if LOOP then
+        if song and song:isValid() and not songRunsOn then
+            song:pause()
+            song:setTime(0)
+            startSong()
+        end
+    else
+        modelAnimator.stop()
+        showAnimated(false)
+        stopSong()
+    end
+end
+
+local function startClip(name)
+    if requested ~= name then return end
+    setup()
+    startSong()
+    modelAnimator.setPoseScale(CLIP_SCALE[name])
+    modelAnimator.playAnimation(name, LOOP, onFinished)
+    showAnimated(true)
+    if DEBUG then
+        timer.simple(1, function()
+            printConsole("animPlayer: " .. modelAnimator.debugInfo()
+                .. " standIn=" .. tostring(standIn and standIn:isValid() and not standIn:getNoDraw())
+                .. " playerHidden=" .. tostring(target:getNoDraw()))
+        end)
+    end
+end
+
+-- the clip waits for its song to finish loading, so the two start together
+local function play(name)
+    stopSong()
+    local audio = CLIP_AUDIO[name]
+    local url = audio and BASE_URL .. audio
+    if not url or not hasPermission("bass.loadURL", url) then
+        startClip(name)
+        return
+    end
+    bass.loadURL(url, "3d noplay", function(sound, _, errorText)
+        if requested ~= name then
+            if sound then sound:stop() end
+            return
+        end
+        if sound then
+            song = sound
+            song:setVolume(AUDIO_VOLUME)
+            song:setFade(AUDIO_FADE_MIN, AUDIO_FADE_MAX)
+            song:setPos(target:getPos())
+            local clipData = modelAnimator.getAnimationData(name)
+            songRunsOn = clipData ~= nil and song:getLength() > clipData.length and not CLIP_SONG_RESTARTS[name]
+            if songRunsOn then pcall(song.setLooping, song, true) end
+        else
+            printConsole("Song failed: " .. tostring(errorText))
+        end
+        startClip(name)
+    end)
+end
+
+local function request(path)
+    requested = path
+    if path == "" then
+        stopSong()
+        modelAnimator.stop()
+        showAnimated(false)
+        return
+    end
+    if loaded[path] then
+        play(path)
+        return
+    end
+    modelAnimator.loadAnimation(BASE_URL .. path .. ".json", function(name, err)
+        if not name then
+            printConsole("Clip failed: " .. path .. " (" .. tostring(err) .. ")")
+            return
+        end
+        loaded[path] = true
+        play(path)
+    end, path)
+end
+
+net.receive("animClip", function()
+    request(net.readString())
+end)
+
+hook.add("think", "animStandInFollow", function()
+    applyHidden()
+    if song and song:isValid() and isValid(target) then song:setPos(target:getPos()) end
+    if not (standIn and standIn:isValid()) or not isValid(target) then return end
+    standIn:setPos(target:getPos())
+    standIn:setAngles(Angle(0, target:getAngles()[2], 0))
+end)
+
+----------    A N I M A T I O N   W H E E L    ----------
+
+local wheel = {open = false, page = 1, hover = nil, left = false, right = false, cx = 0, cy = 0, pages = {}}
+
+local function closeWheel()
+    wheel.open = false
+    wheel.hover = nil
+    input.enableCursor(false)
+end
+
+local function buildPages()
+    local perPage = WHEEL_SLICES - 1
+    for _, group in ipairs(WHEEL_CLIPS) do
+        local names = string.explode(" ", group[3])
+        local count = math.ceil(#names / perPage)
+        for page = 1, count do
+            local items = {{label = "Stop", path = ""}}
+            for i = (page - 1) * perPage + 1, math.min(page * perPage, #names) do
+                local label = names[i]:gsub("_vmd$", ""):gsub("_+", " ")
+                if #label > 20 then label = label:sub(1, 18) .. ".." end
+                items[#items + 1] = {label = label, path = group[2] .. "/" .. names[i]}
+            end
+            wheel.pages[#wheel.pages + 1] = {title = group[1] .. " " .. page .. "/" .. count, items = items}
+        end
+    end
+end
+
+local function openWheel()
+    local w, h = render.getGameResolution()
+    wheel.cx, wheel.cy = w / 2, h / 2
+    wheel.open = true
+    wheel.left = input.isMouseDown(MOUSE.LEFT)
+    wheel.right = input.isMouseDown(MOUSE.RIGHT)
+    input.enableCursor(true)
+    pcall(input.setCursorPos, wheel.cx, wheel.cy)
+end
+
+local function updateHover()
+    local items = wheel.pages[wheel.page].items
+    local x, y = input.getCursorPos()
+    local dx, dy = x - wheel.cx, y - wheel.cy
+    if dx * dx + dy * dy < WHEEL_DEADZONE * WHEEL_DEADZONE then
+        wheel.hover = nil
+        return
+    end
+    local step = math.pi * 2 / #items
+    wheel.hover = math.floor(math.atan2(dx / WHEEL_WIDEN, -dy) / step + 0.5) % #items + 1
+end
+
+local function turnPage(dir)
+    wheel.page = (wheel.page - 1 + dir) % #wheel.pages + 1
+end
+
+local function setupWheel()
+    buildPages()
+    pcall(enableHud, nil, true)
+
+    local key = KEY[WHEEL_KEY]
+    local stopKey = KEY[STOP_KEY]
+    local stopWasDown = false
+    local stopHint = "[" .. STOP_KEY .. "] Stop animation"
+
+    local function pick(path)
+        net.start("animPick")
+        net.writeString(path)
+        net.send()
+    end
+    local cols = {
+        dim = Color(0, 0, 0, 120), box = Color(25, 25, 30, 225), hot = Color(240, 150, 40, 240),
+        text = Color(235, 235, 235), hotText = Color(20, 20, 20), faint = Color(170, 170, 170), line = Color(240, 150, 40, 200),
+    }
+
+    hook.add("think", "animWheelInput", function()
+        if target:isTyping() or input.isGameUIVisible() then
+            if wheel.open then closeWheel() end
+            return
+        end
+
+        local stopDown = input.isKeyDown(stopKey)
+        if stopDown and not stopWasDown and modelAnimator.isPlaying() then pick("") end
+        stopWasDown = stopDown
+
+        local down = input.isKeyDown(key)
+        if down and not wheel.open then
+            openWheel()
+        elseif wheel.open and not down then
+            local item = wheel.hover and wheel.pages[wheel.page].items[wheel.hover]
+            closeWheel()
+            if item then pick(item.path) end
+            return
+        end
+        if not wheel.open then return end
+
+        local left, right = input.isMouseDown(MOUSE.LEFT), input.isMouseDown(MOUSE.RIGHT)
+        if left and not wheel.left then turnPage(1) end
+        if right and not wheel.right then turnPage(-1) end
+        wheel.left, wheel.right = left, right
+        updateHover()
+    end)
+
+    hook.add("inputbindpressed", "animWheelBinds", function(bind)
+        if wheel.open and (bind == "+attack" or bind == "+attack2") then return true end
+        if bind == "+reload" then
+            local weapon = target:getActiveWeapon()
+            if isValid(weapon) and WHEEL_NO_RELOAD[weapon:getClass()] then return true end
+        end
+    end)
+
+    local function drawCentred(text, x, y)
+        local tw, th = render.getTextSize(text)
+        render.drawSimpleText(x - tw / 2, y - th / 2, text)
+    end
+
+    hook.add("drawhud", "animWheelDraw", function()
+        if not wheel.open then
+            if modelAnimator.isPlaying() then
+                local w, h = render.getGameResolution()
+                render.setFont("DermaLarge")
+                local tw, th = render.getTextSize(stopHint)
+                render.setColor(cols.box)
+                render.drawRect(w / 2 - tw / 2 - 16, h - th - 96, tw + 32, th + 16)
+                render.setColor(cols.text)
+                render.drawSimpleText(w / 2 - tw / 2, h - th - 88, stopHint)
+            end
+            return
+        end
+        local cx, cy = wheel.cx, wheel.cy
+        local page = wheel.pages[wheel.page]
+        local items = page.items
+        local step = math.pi * 2 / #items
+
+        render.setColor(cols.dim)
+        render.drawRect(0, 0, cx * 2, cy * 2)
+
+        render.setFont("DermaDefault")
+        for i, item in ipairs(items) do
+            local x = cx + math.sin((i - 1) * step) * WHEEL_RADIUS * WHEEL_WIDEN
+            local y = cy - math.cos((i - 1) * step) * WHEEL_RADIUS
+            local hot = i == wheel.hover
+            if hot then
+                render.setColor(cols.line)
+                render.drawLine(cx, cy, x, y)
+            end
+            render.setColor(hot and cols.hot or cols.box)
+            render.drawRect(x - 70, y - 16, 140, 32)
+            render.setColor(hot and cols.hotText or cols.text)
+            drawCentred(item.label, x, y)
+        end
+
+        render.setColor(cols.box)
+        render.drawRect(cx - 110, cy - 46, 220, 92)
+        render.setFont("DermaLarge")
+        render.setColor(cols.text)
+        drawCentred(page.title, cx, cy - 22)
+        render.setFont("DermaDefault")
+        render.setColor(cols.faint)
+        drawCentred("LMB next   RMB back", cx, cy + 10)
+        drawCentred("Release to play, centre to cancel", cx, cy + 28)
+    end)
+end
+
+if isOwner then setupWheel() end
+
+if isOwner and OWNER_THIRD_PERSON then
+    hook.add("calcview", "animOwnerCamera", function(pos, ang)
+        if not modelAnimator.isPlaying() then return end
+        local head = pos + Vector(0, 0, CAM_UP)
+        local hit = trace.line(head, head - ang:getForward() * CAM_BACK, target)
+        return {origin = hit.HitPos + hit.HitNormal * 4, angles = ang, drawviewer = true}
+    end)
+end
+
+hook.add("Removed", "animRestore", function()
+    if wheel.open then closeWheel() end
+    if USE_STAND_IN then setPlayerHidden(false) end
+end)
