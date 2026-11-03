@@ -43,10 +43,12 @@ local CLIP_AUDIO = {
     ["dances/car_shearer"] = "audio/car_shearer.mp3",
     ["dances/dr_livesey"] = "audio/dr_livesey.mp3",
     ["dances/wide_walk"] = "audio/wide_walk.mp3",
+    ["emotes/private_property"] = "audio/private_property.mp3",
 }
 -- a song longer than its clip normally keeps looping by itself. These restart with the clip instead
 local CLIP_SONG_RESTARTS = {
     ["dances/hips_sway"] = true,
+    ["emotes/private_property"] = true,
 }
 -- stretches the model during a clip: front to back, side to side, height
 local CLIP_SCALE = {
@@ -72,7 +74,7 @@ local WHEEL_NO_RELOAD = {weapon_physgun = true, gmod_tool = true} -- R won't als
 
 local WHEEL_CLIPS = {
     {"Dances", "dances", "wide_walk hips_sway rick_roll car_shearer dr_livesey california_gurls gangnam_style flair 0_to_100 bailegetdown breakdance breakdance_2 bubbletop1 caramelldansen feelings_motion__vmd fighter_vmd francium galaxias__vmd geddan head_spin hip_hop_dancing macarena_dance peakaboo running_man_slav shuffling snake sweet_dreams_vmd take_on_me the_other_side1_1_vmd twerk work_bitch_vmd"},
-    {"Emotes", "emotes", "0005_damage 0015_fly_circle 1h_sword_swing_low_left_humanoid anime_salute back_kick blowkiss brazilian_kick combo_hits_one_one combo_when_surrounded cqc dab death deathlonger defensive_side_kick flip_off flip_off_hard front_kick hit human_hit_01 hurricane_kick hurricane_kickmodified kicking launcher low_kick mma_combo_kick_and_spinning_back_kick mma_combo_kick_and_spinning_back_kick_001_001 mma_left_high_kick mma_left_low_kick mma_right_high_kick mma_right_low_kick mma_side_kick mma_spinning_back_kick mutant_roaring mutant_slash pathead_00 punch punch_2 punching pushedaround roundhouse run_to_dive salute salute_1 salutelongermia sky_upper soccer_tackle soccer_tackled stabbing zombie_atack1 zombie_atack2 zombie_reaction_hit1 zombie_reaction_hit2"},
+    {"Emotes", "emotes", "private_property 0005_damage0015_fly_circle 1h_sword_swing_low_left_humanoid anime_salute back_kick blowkiss brazilian_kick combo_hits_one_one combo_when_surrounded cqc dab death deathlonger defensive_side_kick flip_off flip_off_hard front_kick hit human_hit_01 hurricane_kick hurricane_kickmodified kicking launcher low_kick mma_combo_kick_and_spinning_back_kick mma_combo_kick_and_spinning_back_kick_001_001 mma_left_high_kick mma_left_low_kick mma_right_high_kick mma_right_low_kick mma_side_kick mma_spinning_back_kick mutant_roaring mutant_slash pathead_00 punch punch_2 punching pushedaround roundhouse run_to_dive salute salute_1 salutelongermia sky_upper soccer_tackle soccer_tackled stabbing zombie_atack1 zombie_atack2 zombie_reaction_hit1 zombie_reaction_hit2"},
     {"TF2 Spy", "tf2_spy", "03 04 05 a_reference aerobic_a aerobic_a_start aerobic_b aerobic_b_start brutallegendin brutallegendinterior brutallegendout buy_a_life conga dosido_dance dosido_intro flip_start flip_success_initiator flip_success_receiver headbutt_start headbutt_success hifivesuccess hifivesuccessfull highfivestart laugh layer_dieviolent primary_death_backstab primary_death_burning primary_death_headshot ragdollspawn rps_paper rps_paper_lose rps_paper_win rps_rock rps_rock_lose rps_rock_win rps_scissors rps_scissors_lose rps_scissors_win rps_start russian secondary_taunt selectionmenu_anim01 spy_replay spy_replay_taunt taunt06 taunt_vehicle_allclass_honk vehicle_allclass_end vehicle_allclass_honk vehicle_allclass_spawn vehicle_allclass_start_layer yeti_layer yeti_prop yetipunch"},
 }
 
