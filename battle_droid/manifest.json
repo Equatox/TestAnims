@@ -1,0 +1,535 @@
+{
+ "version": 1,
+ "name": "battle_droid",
+ "model": "models/player/kleiner.mdl",
+ "parts": [
+  {
+   "name": "chest",
+   "bone": "ValveBiped.Bip01_Spine4",
+   "pos": [
+    -1.63167,
+    1.8843,
+    -0.52522
+   ],
+   "ang": [
+    -89.99997,
+    169.74998,
+    0.0
+   ],
+   "mins": [
+    -6.776,
+    -6.77,
+    -18.049
+   ],
+   "maxs": [
+    6.776,
+    6.77,
+    18.049
+   ],
+   "tris": 324,
+   "mesh": "chest.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "head",
+   "bone": "ValveBiped.Bip01_Head1",
+   "pos": [
+    -0.68831,
+    -4.00857,
+    0.48899
+   ],
+   "ang": [
+    89.99985,
+    9.9,
+    0.0
+   ],
+   "mins": [
+    -3.231,
+    -6.973,
+    -5.358
+   ],
+   "maxs": [
+    3.231,
+    6.973,
+    5.358
+   ],
+   "tris": 116,
+   "mesh": "head.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "l_foot",
+   "bone": "ValveBiped.Bip01_L_Foot",
+   "pos": [
+    3.87031,
+    -1.64631,
+    0.37413
+   ],
+   "ang": [
+    -87.15747,
+    -28.32929,
+    84.83996
+   ],
+   "mins": [
+    -2.865,
+    -6.327,
+    -4.478
+   ],
+   "maxs": [
+    2.865,
+    6.327,
+    4.478
+   ],
+   "tris": 20,
+   "mesh": "l_foot.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "l_forearm",
+   "bone": "ValveBiped.Bip01_L_Forearm",
+   "pos": [
+    6.6307,
+    0.10842,
+    -0.0568
+   ],
+   "ang": [
+    -49.78807,
+    0.76646,
+    -3e-05
+   ],
+   "mins": [
+    -4.705,
+    -2.298,
+    -5.436
+   ],
+   "maxs": [
+    4.705,
+    2.298,
+    5.436
+   ],
+   "tris": 74,
+   "mesh": "l_forearm.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "l_hand",
+   "bone": "ValveBiped.Bip01_L_Hand",
+   "pos": [
+    2.71287,
+    -1.05778,
+    0.26312
+   ],
+   "ang": [
+    -1.04533,
+    43.6949,
+    -91.44743
+   ],
+   "mins": [
+    -2.519,
+    -2.274,
+    -4.224
+   ],
+   "maxs": [
+    2.519,
+    2.274,
+    4.224
+   ],
+   "tris": 74,
+   "mesh": "l_hand.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "l_shin",
+   "bone": "ValveBiped.Bip01_L_Calf",
+   "pos": [
+    9.37403,
+    -0.41836,
+    0.09585
+   ],
+   "ang": [
+    -89.7008,
+    -4.9261,
+    -0.00355
+   ],
+   "mins": [
+    -2.322,
+    -3.044,
+    -9.834
+   ],
+   "maxs": [
+    2.322,
+    3.044,
+    9.834
+   ],
+   "tris": 16,
+   "mesh": "l_shin.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "l_thigh",
+   "bone": "ValveBiped.Bip01_L_Thigh",
+   "pos": [
+    8.87124,
+    0.02196,
+    -0.16688
+   ],
+   "ang": [
+    -89.70079,
+    -2.9669,
+    -0.00319
+   ],
+   "mins": [
+    -2.424,
+    -3.643,
+    -11.985
+   ],
+   "maxs": [
+    2.424,
+    3.643,
+    11.985
+   ],
+   "tris": 93,
+   "mesh": "l_thigh.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "l_upperarm",
+   "bone": "ValveBiped.Bip01_L_UpperArm",
+   "pos": [
+    5.52858,
+    -0.27713,
+    0.01329
+   ],
+   "ang": [
+    -49.78808,
+    -2.6926,
+    -3e-05
+   ],
+   "mins": [
+    -6.31,
+    -2.87,
+    -7.089
+   ],
+   "maxs": [
+    6.31,
+    2.87,
+    7.089
+   ],
+   "tris": 138,
+   "mesh": "l_upperarm.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "neck",
+   "bone": "ValveBiped.Bip01_Neck1",
+   "pos": [
+    0.81641,
+    -2.97462,
+    0.4856
+   ],
+   "ang": [
+    89.99983,
+    33.19572,
+    0.0
+   ],
+   "mins": [
+    -3.14,
+    -2.652,
+    -5.62
+   ],
+   "maxs": [
+    3.14,
+    2.652,
+    5.62
+   ],
+   "tris": 54,
+   "mesh": "neck.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "pelvis",
+   "bone": "ValveBiped.Bip01_Pelvis",
+   "pos": [
+    -0.49343,
+    1.21121,
+    -0.16045
+   ],
+   "ang": [
+    0.0,
+    0.0,
+    -89.99998
+   ],
+   "mins": [
+    -4.27,
+    -3.928,
+    -4.211
+   ],
+   "maxs": [
+    4.27,
+    3.928,
+    4.211
+   ],
+   "tris": 52,
+   "mesh": "pelvis.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "r_foot",
+   "bone": "ValveBiped.Bip01_R_Foot",
+   "pos": [
+    3.95369,
+    -1.6788,
+    -0.11778
+   ],
+   "ang": [
+    -86.82074,
+    141.91166,
+    -85.3875
+   ],
+   "mins": [
+    -2.864,
+    -6.326,
+    -4.498
+   ],
+   "maxs": [
+    2.864,
+    6.326,
+    4.498
+   ],
+   "tris": 20,
+   "mesh": "r_foot.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "r_forearm",
+   "bone": "ValveBiped.Bip01_R_Forearm",
+   "pos": [
+    6.63075,
+    0.10846,
+    0.05683
+   ],
+   "ang": [
+    -49.78789,
+    -179.23356,
+    -179.99989
+   ],
+   "mins": [
+    -4.705,
+    -2.298,
+    -5.436
+   ],
+   "maxs": [
+    4.705,
+    2.298,
+    5.436
+   ],
+   "tris": 74,
+   "mesh": "r_forearm.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "r_hand",
+   "bone": "ValveBiped.Bip01_R_Hand",
+   "pos": [
+    2.7129,
+    -1.05998,
+    -0.25432
+   ],
+   "ang": [
+    -1.37171,
+    -136.31207,
+    88.89439
+   ],
+   "mins": [
+    -2.519,
+    -2.274,
+    -4.224
+   ],
+   "maxs": [
+    2.519,
+    2.274,
+    4.224
+   ],
+   "tris": 74,
+   "mesh": "r_hand.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "r_shin",
+   "bone": "ValveBiped.Bip01_R_Calf",
+   "pos": [
+    9.43289,
+    -0.48454,
+    0.07441
+   ],
+   "ang": [
+    -89.70065,
+    175.06755,
+    -179.99668
+   ],
+   "mins": [
+    -2.322,
+    -3.04,
+    -9.601
+   ],
+   "maxs": [
+    2.322,
+    3.04,
+    9.601
+   ],
+   "tris": 16,
+   "mesh": "r_shin.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "r_thigh",
+   "bone": "ValveBiped.Bip01_R_Thigh",
+   "pos": [
+    8.99386,
+    0.07857,
+    0.12644
+   ],
+   "ang": [
+    -89.70065,
+    177.02599,
+    -179.99643
+   ],
+   "mins": [
+    -2.261,
+    -3.742,
+    -12.135
+   ],
+   "maxs": [
+    2.261,
+    3.742,
+    12.135
+   ],
+   "tris": 93,
+   "mesh": "r_thigh.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "r_upperarm",
+   "bone": "ValveBiped.Bip01_R_UpperArm",
+   "pos": [
+    5.52864,
+    -0.27712,
+    -0.01329
+   ],
+   "ang": [
+    -49.78789,
+    177.30738,
+    -179.99989
+   ],
+   "mins": [
+    -6.31,
+    -2.87,
+    -7.089
+   ],
+   "maxs": [
+    6.31,
+    2.87,
+    7.089
+   ],
+   "tris": 138,
+   "mesh": "r_upperarm.obj",
+   "texture": "droid_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  }
+ ]
+}
