@@ -4,64 +4,31 @@
  "model": "models/player/kleiner.mdl",
  "parts": [
   {
-   "name": "Cube",
+   "name": "polySurface19",
    "bone": "ValveBiped.Bip01_Head1",
    "pos": [
-    3.87348,
-    0.06931,
-    0.01516
+    3.55835,
+    -0.23648,
+    1e-05
    ],
    "ang": [
-    89.99985,
-    -170.09999,
+    89.99984,
+    -80.1,
     0.0
    ],
    "mins": [
-    -4.894,
-    -8.444,
-    -4.604
+    -10.029,
+    -6.444,
+    -6.998
    ],
    "maxs": [
-    4.894,
-    8.444,
-    4.604
+    10.029,
+    6.444,
+    6.998
    ],
-   "tris": 12,
-   "mesh": "Cube.obj",
-   "color": [
-    225,
-    78,
-    231,
-    178
-   ],
-   "translucent": true
-  },
-  {
-   "name": "Cube_002",
-   "bone": "ValveBiped.Bip01_R_Wrist",
-   "pos": [
-    0.99607,
-    -0.32193,
-    -0.06008
-   ],
-   "ang": [
-    -49.78803,
-    -179.24372,
-    -179.98658
-   ],
-   "mins": [
-    -7.163,
-    -8.603,
-    -6.856
-   ],
-   "maxs": [
-    7.163,
-    8.603,
-    6.856
-   ],
-   "tris": 12,
-   "mesh": "Cube_002.obj",
-   "texture": "Texturesss.png",
+   "tris": 3788,
+   "mesh": "polySurface19.obj",
+   "texture": "Iron_Helm_2_lambert1_BaseColor.png",
    "color": [
     255,
     255,
