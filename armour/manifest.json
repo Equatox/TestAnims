@@ -5,16 +5,15 @@
  "parts": [
   {
    "name": "TX-130_saber-class_fighter_tank",
-   "bone": "ValveBiped.Anim_Attachment_RH",
    "pos": [
-    8.0737,
-    1.65106,
-    -24.75146
+    0.0,
+    0.0,
+    46.56952
    ],
    "ang": [
-    46.29492,
-    -1.9855,
-    177.45877
+    0.0,
+    0.0,
+    -1e-05
    ],
    "mins": [
     -100.832,
