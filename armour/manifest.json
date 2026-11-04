@@ -4,37 +4,37 @@
  "model": "models/player/kleiner.mdl",
  "parts": [
   {
-   "name": "polySurface19",
-   "bone": "ValveBiped.Bip01_Head1",
+   "name": "TX-130_saber-class_fighter_tank",
+   "bone": "ValveBiped.forward",
    "pos": [
-    3.55835,
-    -0.23648,
-    1e-05
+    -3.73831,
+    1e-05,
+    -16.91854
    ],
    "ang": [
-    89.99984,
-    -80.1,
-    0.0
+    -5e-05,
+    90.00015,
+    4.09999
    ],
    "mins": [
-    -10.029,
-    -6.444,
-    -6.998
+    -100.832,
+    -140.985,
+    -48.919
    ],
    "maxs": [
-    10.029,
-    6.444,
-    6.998
+    100.832,
+    140.792,
+    48.816
    ],
-   "tris": 3788,
-   "mesh": "polySurface19.obj",
-   "texture": "Iron_Helm_2_lambert1_BaseColor.png",
+   "tris": 7212,
+   "mesh": "TX-130_saber-class_fighter_tank.obj",
    "color": [
-    255,
-    255,
-    255,
-    255
-   ]
+    231,
+    231,
+    231,
+    0
+   ],
+   "translucent": true
   }
  ]
 }
