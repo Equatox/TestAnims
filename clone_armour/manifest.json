@@ -1,0 +1,568 @@
+{
+ "version": 1,
+ "name": "clone_armour",
+ "model": "models/player/kleiner.mdl",
+ "parts": [
+  {
+   "name": "helmet",
+   "bone": "ValveBiped.Bip01_Head1",
+   "pos": [
+    4.37158,
+    -0.20847,
+    -0.06476
+   ],
+   "ang": [
+    89.99985,
+    9.9,
+    0.0
+   ],
+   "mins": [
+    -7.32,
+    -8.453,
+    -8.584
+   ],
+   "maxs": [
+    7.32,
+    8.453,
+    8.584
+   ],
+   "tris": 498,
+   "mesh": "helmet.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "l_boot",
+   "bone": "ValveBiped.Bip01_L_Foot",
+   "pos": [
+    3.2597,
+    -0.3119,
+    -0.3023
+   ],
+   "ang": [
+    -87.15747,
+    -28.32929,
+    84.83996
+   ],
+   "mins": [
+    -4.038,
+    -7.547,
+    -3.74
+   ],
+   "maxs": [
+    4.038,
+    7.547,
+    3.74
+   ],
+   "tris": 106,
+   "mesh": "l_boot.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "l_forearm",
+   "bone": "ValveBiped.Bip01_L_Forearm",
+   "pos": [
+    4.70555,
+    -0.54263,
+    -0.57524
+   ],
+   "ang": [
+    -49.78807,
+    0.76646,
+    -3e-05
+   ],
+   "mins": [
+    -6.33,
+    -3.95,
+    -7.18
+   ],
+   "maxs": [
+    6.33,
+    3.95,
+    7.18
+   ],
+   "tris": 64,
+   "mesh": "l_forearm.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "l_hand",
+   "bone": "ValveBiped.Bip01_L_Hand",
+   "pos": [
+    1.38117,
+    -0.6869,
+    0.70693
+   ],
+   "ang": [
+    -1.04533,
+    43.6949,
+    -91.44743
+   ],
+   "mins": [
+    -3.142,
+    -3.667,
+    -2.566
+   ],
+   "maxs": [
+    3.142,
+    3.667,
+    2.566
+   ],
+   "tris": 26,
+   "mesh": "l_hand.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "l_shin",
+   "bone": "ValveBiped.Bip01_L_Calf",
+   "pos": [
+    7.90566,
+    -0.50299,
+    -0.47104
+   ],
+   "ang": [
+    -89.7008,
+    -4.9261,
+    -0.00355
+   ],
+   "mins": [
+    -4.606,
+    -6.169,
+    -10.773
+   ],
+   "maxs": [
+    4.606,
+    6.169,
+    10.773
+   ],
+   "tris": 134,
+   "mesh": "l_shin.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "l_thigh",
+   "bone": "ValveBiped.Bip01_L_Thigh",
+   "pos": [
+    8.48641,
+    0.40204,
+    -0.21319
+   ],
+   "ang": [
+    -89.70079,
+    -2.9669,
+    -0.00319
+   ],
+   "mins": [
+    -5.716,
+    -7.119,
+    -10.371
+   ],
+   "maxs": [
+    5.716,
+    7.119,
+    10.371
+   ],
+   "tris": 88,
+   "mesh": "l_thigh.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "l_upperarm",
+   "bone": "ValveBiped.Bip01_L_UpperArm",
+   "pos": [
+    6.37071,
+    -0.64149,
+    -1.19469
+   ],
+   "ang": [
+    -49.78808,
+    -2.6926,
+    -3e-05
+   ],
+   "mins": [
+    -3.858,
+    -4.545,
+    -6.246
+   ],
+   "maxs": [
+    3.858,
+    4.545,
+    6.246
+   ],
+   "tris": 104,
+   "mesh": "l_upperarm.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "r_boot",
+   "bone": "ValveBiped.Bip01_R_Foot",
+   "pos": [
+    3.13056,
+    -0.22294,
+    0.35849
+   ],
+   "ang": [
+    -86.82074,
+    141.91166,
+    -85.3875
+   ],
+   "mins": [
+    -4.107,
+    -7.717,
+    -3.74
+   ],
+   "maxs": [
+    4.107,
+    7.717,
+    3.74
+   ],
+   "tris": 106,
+   "mesh": "r_boot.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "r_forearm",
+   "bone": "ValveBiped.Bip01_R_Forearm",
+   "pos": [
+    4.70556,
+    -0.58332,
+    0.29029
+   ],
+   "ang": [
+    -49.78789,
+    -179.23356,
+    -179.99989
+   ],
+   "mins": [
+    -6.33,
+    -3.95,
+    -7.18
+   ],
+   "maxs": [
+    6.33,
+    3.95,
+    7.18
+   ],
+   "tris": 84,
+   "mesh": "r_forearm.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "r_hand",
+   "bone": "ValveBiped.Bip01_R_Hand",
+   "pos": [
+    1.39154,
+    -0.64783,
+    -0.70174
+   ],
+   "ang": [
+    -1.37171,
+    -136.31207,
+    88.89439
+   ],
+   "mins": [
+    -3.146,
+    -3.667,
+    -2.569
+   ],
+   "maxs": [
+    3.146,
+    3.667,
+    2.569
+   ],
+   "tris": 26,
+   "mesh": "r_hand.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "r_shin",
+   "bone": "ValveBiped.Bip01_R_Calf",
+   "pos": [
+    7.88732,
+    -0.16753,
+    0.66231
+   ],
+   "ang": [
+    -89.70065,
+    175.06755,
+    -179.99668
+   ],
+   "mins": [
+    -4.603,
+    -6.169,
+    -10.754
+   ],
+   "maxs": [
+    4.603,
+    6.169,
+    10.754
+   ],
+   "tris": 134,
+   "mesh": "r_shin.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "r_thigh",
+   "bone": "ValveBiped.Bip01_R_Thigh",
+   "pos": [
+    8.4859,
+    0.66336,
+    0.56384
+   ],
+   "ang": [
+    -89.70065,
+    177.02599,
+    -179.99643
+   ],
+   "mins": [
+    -5.721,
+    -7.119,
+    -10.371
+   ],
+   "maxs": [
+    5.721,
+    7.119,
+    10.371
+   ],
+   "tris": 88,
+   "mesh": "r_thigh.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "r_upperarm",
+   "bone": "ValveBiped.Bip01_R_UpperArm",
+   "pos": [
+    5.87121,
+    -1.08119,
+    1.81224
+   ],
+   "ang": [
+    -49.78789,
+    177.30738,
+    -179.99989
+   ],
+   "mins": [
+    -4.632,
+    -4.545,
+    -6.246
+   ],
+   "maxs": [
+    4.632,
+    4.545,
+    6.246
+   ],
+   "tris": 114,
+   "mesh": "r_upperarm.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "visor",
+   "bone": "ValveBiped.Bip01_Head1",
+   "pos": [
+    2.02047,
+    -3.66387,
+    -0.06477
+   ],
+   "ang": [
+    89.99985,
+    9.9,
+    0.0
+   ],
+   "mins": [
+    -5.661,
+    -3.541,
+    -4.676
+   ],
+   "maxs": [
+    5.661,
+    3.541,
+    4.676
+   ],
+   "tris": 24,
+   "mesh": "visor.obj",
+   "texture": "clone_visor_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "belt",
+   "bone": "ValveBiped.Bip01_Spine",
+   "pos": [
+    2.82545,
+    3.99882,
+    -0.01351
+   ],
+   "ang": [
+    -89.99997,
+    -175.05576,
+    0.0
+   ],
+   "mins": [
+    -9.12,
+    -5.802,
+    -4.123
+   ],
+   "maxs": [
+    9.12,
+    5.802,
+    4.123
+   ],
+   "tris": 98,
+   "mesh": "belt.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "chest",
+   "bone": "ValveBiped.Bip01_Spine4",
+   "pos": [
+    -3.1803,
+    3.7736,
+    -0.01351
+   ],
+   "ang": [
+    -89.99997,
+    169.74998,
+    0.0
+   ],
+   "mins": [
+    -9.267,
+    -7.754,
+    -11.098
+   ],
+   "maxs": [
+    9.267,
+    7.754,
+    11.098
+   ],
+   "tris": 514,
+   "mesh": "chest.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  },
+  {
+   "name": "pelvis",
+   "bone": "ValveBiped.Bip01_Pelvis",
+   "pos": [
+    -0.25479,
+    -0.67326,
+    -1.1819
+   ],
+   "ang": [
+    0.0,
+    0.0,
+    -89.99998
+   ],
+   "mins": [
+    -8.759,
+    -8.182,
+    -7.193
+   ],
+   "maxs": [
+    8.759,
+    8.182,
+    7.193
+   ],
+   "tris": 122,
+   "mesh": "pelvis.obj",
+   "texture": "clone_armour_tex.png",
+   "color": [
+    255,
+    255,
+    255,
+    255
+   ]
+  }
+ ]
+}
