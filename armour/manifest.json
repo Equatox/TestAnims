@@ -61,10 +61,11 @@
    ],
    "tris": 12,
    "mesh": "Cube_002.obj",
+   "texture": "Texturesss.png",
    "color": [
-    43,
-    82,
-    231,
+    255,
+    255,
+    255,
     255
    ]
   }
