@@ -1,0 +1,457 @@
+{
+ "name": "lego_clone",
+ "height": 72.0,
+ "scale_ldu": 0.6494202178798446,
+ "parts": [
+  {
+   "name": "hips",
+   "parent": null,
+   "mesh": "hips.obj",
+   "pivot": [
+    0.0,
+    0.0,
+    26.283
+   ],
+   "local_pos": [
+    0.0,
+    0.0,
+    26.283
+   ],
+   "mins": [
+    -6.41,
+    -11.61,
+    -13.56
+   ],
+   "maxs": [
+    6.41,
+    11.61,
+    7.06
+   ],
+   "tris": 668,
+   "submeshes": [
+    {
+     "object": "hips_black",
+     "colour": "black",
+     "rgb": [
+      4,
+      18,
+      28
+     ],
+     "tris": 668
+    }
+   ]
+  },
+  {
+   "name": "torso",
+   "parent": "hips",
+   "mesh": "torso.obj",
+   "pivot": [
+    0.0,
+    0.0,
+    26.283
+   ],
+   "local_pos": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "mins": [
+    -6.41,
+    -12.26,
+    0.08
+   ],
+   "maxs": [
+    6.41,
+    12.26,
+    28.49
+   ],
+   "tris": 2566,
+   "submeshes": [
+    {
+     "object": "torso_black",
+     "colour": "black",
+     "rgb": [
+      4,
+      18,
+      28
+     ],
+     "tris": 904
+    },
+    {
+     "object": "torso_dark_gray",
+     "colour": "dark_gray",
+     "rgb": [
+      108,
+      109,
+      91
+     ],
+     "tris": 164
+    },
+    {
+     "object": "torso_light_gray",
+     "colour": "light_gray",
+     "rgb": [
+      154,
+      160,
+      156
+     ],
+     "tris": 88
+    },
+    {
+     "object": "torso_white",
+     "colour": "white",
+     "rgb": [
+      254,
+      254,
+      254
+     ],
+     "tris": 1410
+    }
+   ]
+  },
+  {
+   "name": "head",
+   "parent": "torso",
+   "mesh": "head.obj",
+   "pivot": [
+    0.0,
+    0.0,
+    47.027
+   ],
+   "local_pos": [
+    0.0,
+    0.0,
+    20.745
+   ],
+   "mins": [
+    -14.38,
+    -10.83,
+    0.12
+   ],
+   "maxs": [
+    13.75,
+    10.83,
+    24.97
+   ],
+   "tris": 5758,
+   "submeshes": [
+    {
+     "object": "head_black",
+     "colour": "black",
+     "rgb": [
+      4,
+      18,
+      28
+     ],
+     "tris": 278
+    },
+    {
+     "object": "head_dark_bluish_gray",
+     "colour": "dark_bluish_gray",
+     "rgb": [
+      107,
+      109,
+      103
+     ],
+     "tris": 144
+    },
+    {
+     "object": "head_light_gray",
+     "colour": "light_gray",
+     "rgb": [
+      154,
+      160,
+      156
+     ],
+     "tris": 44
+    },
+    {
+     "object": "head_light_nougat",
+     "colour": "light_nougat",
+     "rgb": [
+      245,
+      214,
+      178
+     ],
+     "tris": 3236
+    },
+    {
+     "object": "head_white",
+     "colour": "white",
+     "rgb": [
+      254,
+      254,
+      254
+     ],
+     "tris": 2056
+    }
+   ]
+  },
+  {
+   "name": "r_leg",
+   "parent": "hips",
+   "mesh": "r_leg.obj",
+   "pivot": [
+    0.008,
+    -0.095,
+    18.448
+   ],
+   "local_pos": [
+    0.008,
+    -0.095,
+    -7.835
+   ],
+   "mins": [
+    -5.77,
+    -12.49,
+    -18.06
+   ],
+   "maxs": [
+    7.05,
+    -0.96,
+    5.8
+   ],
+   "tris": 606,
+   "submeshes": [
+    {
+     "object": "r_leg_white",
+     "colour": "white",
+     "rgb": [
+      254,
+      254,
+      254
+     ],
+     "tris": 606
+    }
+   ]
+  },
+  {
+   "name": "l_leg",
+   "parent": "hips",
+   "mesh": "l_leg.obj",
+   "pivot": [
+    0.008,
+    0.095,
+    18.448
+   ],
+   "local_pos": [
+    0.008,
+    0.095,
+    -7.835
+   ],
+   "mins": [
+    -5.77,
+    0.96,
+    -18.06
+   ],
+   "maxs": [
+    7.05,
+    12.49,
+    5.8
+   ],
+   "tris": 606,
+   "submeshes": [
+    {
+     "object": "l_leg_white",
+     "colour": "white",
+     "rgb": [
+      254,
+      254,
+      254
+     ],
+     "tris": 606
+    }
+   ]
+  },
+  {
+   "name": "r_arm",
+   "parent": "torso",
+   "mesh": "r_arm.obj",
+   "pivot": [
+    0.002,
+    -10.138,
+    41.23
+   ],
+   "local_pos": [
+    0.002,
+    -10.138,
+    14.947
+   ],
+   "mins": [
+    -6.69,
+    -8.63,
+    -13.96
+   ],
+   "maxs": [
+    4.17,
+    4.85,
+    4.12
+   ],
+   "tris": 1166,
+   "submeshes": [
+    {
+     "object": "r_arm_white",
+     "colour": "white",
+     "rgb": [
+      254,
+      254,
+      254
+     ],
+     "tris": 1166
+    }
+   ]
+  },
+  {
+   "name": "l_arm",
+   "parent": "torso",
+   "mesh": "l_arm.obj",
+   "pivot": [
+    0.002,
+    10.071,
+    41.251
+   ],
+   "local_pos": [
+    0.002,
+    10.071,
+    14.968
+   ],
+   "mins": [
+    -6.69,
+    -4.85,
+    -13.95
+   ],
+   "maxs": [
+    4.17,
+    8.64,
+    4.12
+   ],
+   "tris": 1166,
+   "submeshes": [
+    {
+     "object": "l_arm_white",
+     "colour": "white",
+     "rgb": [
+      254,
+      254,
+      254
+     ],
+     "tris": 1166
+    }
+   ]
+  },
+  {
+   "name": "r_hand",
+   "parent": "r_arm",
+   "mesh": "r_hand.obj",
+   "pivot": [
+    -0.806,
+    -15.655,
+    28.259
+   ],
+   "local_pos": [
+    -0.808,
+    -5.518,
+    -12.971
+   ],
+   "mins": [
+    -3.7,
+    -5.41,
+    -9.25
+   ],
+   "maxs": [
+    6.23,
+    3.22,
+    8.45
+   ],
+   "tris": 514,
+   "submeshes": [
+    {
+     "object": "r_hand_black",
+     "colour": "black",
+     "rgb": [
+      4,
+      18,
+      28
+     ],
+     "tris": 514
+    }
+   ]
+  },
+  {
+   "name": "l_hand",
+   "parent": "l_arm",
+   "mesh": "l_hand.obj",
+   "pivot": [
+    -0.524,
+    15.625,
+    28.124
+   ],
+   "local_pos": [
+    -0.526,
+    5.555,
+    -13.127
+   ],
+   "mins": [
+    -3.7,
+    -2.95,
+    -9.32
+   ],
+   "maxs": [
+    5.69,
+    4.8,
+    8.45
+   ],
+   "tris": 514,
+   "submeshes": [
+    {
+     "object": "l_hand_black",
+     "colour": "black",
+     "rgb": [
+      4,
+      18,
+      28
+     ],
+     "tris": 514
+    }
+   ]
+  },
+  {
+   "name": "gun",
+   "parent": "r_hand",
+   "mesh": "gun.obj",
+   "pivot": [
+    0.21,
+    -16.705,
+    21.978
+   ],
+   "local_pos": [
+    1.015,
+    -1.05,
+    -6.281
+   ],
+   "mins": [
+    -0.14,
+    -6.55,
+    -21.98
+   ],
+   "maxs": [
+    28.36,
+    3.2,
+    57.29
+   ],
+   "tris": 3792,
+   "submeshes": [
+    {
+     "object": "gun_black",
+     "colour": "black",
+     "rgb": [
+      4,
+      18,
+      28
+     ],
+     "tris": 3792
+    }
+   ]
+  }
+ ]
+}
